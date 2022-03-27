@@ -1,0 +1,17 @@
+[package]
+name = "afibex"
+version = "0.1.0"
+edition = "2021"
+authors = ["Matthias Behr"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/mbehr1/afibex/"
+homepage = "https://github.com/mbehr1/afibex/"
+readme= "README.md"
+description = "Library to handle automotive / ASAM fibex files."
+keywords = ["dlt", "automotive", "log", "someip", "analysis"]
+categories = ["development-tools", "encoding", "parsing"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+quick-xml = "0.22.0"
