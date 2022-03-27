@@ -2,7 +2,7 @@
 
 This Rust crate provides a library with helper functions to handle [ASAM](https://www.asam.net/) fibex files.
 
-It's used e.g. from crate [asomeip](https://github.com/mbehr/asomeip/) to decode the payload for SOME/IP messages shown in [adlt](https://github.com/adlt/).
+It's used e.g. from crate [asomeip](https://github.com/mbehr1/asomeip/) to decode the payload for SOME/IP messages shown in [adlt](https://github.com/mbehr1/adlt/).
 
 ## Features
 
