@@ -183,7 +183,7 @@ pub struct GetterSetterNotifier {
 /// we do need to lookup most of the times by method id so optimize datastructure for it
 #[derive(Debug)]
 pub enum MethodIdType {
-    Method(Method),
+    Method(Method), // used for Events as well
     Getter { field: Arc<Parameter> },
     Setter { field: Arc<Parameter> },
     Notifier { field: Arc<Parameter> },
@@ -201,7 +201,7 @@ pub struct Service {
     // fields put directly into methods?
     pub fields: Vec<Arc<Parameter>>,
     // event-groups?
-    pub methods_by_mid: HashMap<u16, MethodIdType>, // covers fields as well (getter, setter)
+    pub methods_by_mid: HashMap<u16, MethodIdType>, // covers fields and events as well (getter, setter)
                                                     // MODIFIERS?
 }
 
@@ -650,13 +650,13 @@ impl FibexData {
                             reader.read_text(e.name(), &mut Vec::new())?.parse::<u8>()?
                     }
                     b"METHODS" => {} // we ignore to get the method events
-                    b"METHOD" => {
+                    b"METHOD" | b"EVENT" => {
                         let method = self.parse_method(e, reader)?;
                         let key = method.method_identifier.unwrap_or_default();
                         methods_by_mid.insert(key, MethodIdType::Method(method));
                         // todo ignore duplicates?
                     }
-                    b"FIELDS" => {} // we ignore to get the FIELD events
+                    b"FIELDS" | b"EVENTS" => {} // we ignore to get the FIELD/EVENT events
                     b"FIELD" => {
                         let field = Arc::new(self.parse_parameter(e, reader, true)?);
 
@@ -687,7 +687,7 @@ impl FibexData {
 
                         fields.push(field);
                     }
-                    b"EVENTS" | b"EVENT-GROUPS" => skip_element(e, reader)?, // todo!
+                    b"EVENT-GROUPS" => skip_element(e, reader)?, // todo!
                     _ => {
                         println!(
                             "parse_service_interface: Event::Start of unknown '{}'",
