@@ -183,7 +183,8 @@ pub struct GetterSetterNotifier {
 /// we do need to lookup most of the times by method id so optimize datastructure for it
 #[derive(Debug)]
 pub enum MethodIdType {
-    Method(Method), // used for Events as well
+    Method(Method),
+    Event(Method),
     Getter { field: Arc<Parameter> },
     Setter { field: Arc<Parameter> },
     Notifier { field: Arc<Parameter> },
@@ -651,9 +652,8 @@ impl FibexData {
                     }
                     b"METHODS" => {} // we ignore to get the method events
                     b"METHOD" | b"EVENT" => {
-                        let method = self.parse_method(e, reader)?;
-                        let key = method.method_identifier.unwrap_or_default();
-                        methods_by_mid.insert(key, MethodIdType::Method(method));
+                        let (mid, key) = self.parse_method(e, reader)?;
+                        methods_by_mid.insert(key, mid);
                         // todo ignore duplicates?
                     }
                     b"FIELDS" | b"EVENTS" => {} // we ignore to get the FIELD/EVENT events
@@ -721,7 +721,7 @@ impl FibexData {
         &mut self,
         e_method: &quick_xml::events::BytesStart,
         reader: &mut Reader<T>,
-    ) -> Result<Method, Box<dyn Error>> {
+    ) -> Result<(MethodIdType, u16), Box<dyn Error>> {
         let mut buf = Vec::with_capacity(64 * 1024); // todo better default
         let mut short_name: Option<String> = None;
         let mut desc: Option<String> = None;
@@ -735,6 +735,8 @@ impl FibexData {
             .find(|a| a.key == b"ID")
             .and_then(|attribute| String::from_utf8(attribute.value.to_vec()).ok())
             .ok_or_else(|| FibexError::new("ID missing in Method"))?;
+
+        let is_event = e_method.local_name() == b"EVENT";
 
         loop {
             match reader.read_event(&mut buf)? {
@@ -793,6 +795,8 @@ impl FibexData {
         input_params.sort_by(|a, b| a.position.cmp(&b.position));
         return_params.sort_by(|a, b| a.position.cmp(&b.position));
 
+        let key = &method_identifier.unwrap_or_default();
+
         let m = Method {
             id,
             method_identifier,
@@ -801,7 +805,12 @@ impl FibexData {
             input_params,
             return_params,
         };
-        Ok(m)
+        let mid = if is_event {
+            MethodIdType::Event(m)
+        } else {
+            MethodIdType::Method(m)
+        };
+        Ok((mid, *key))
     }
 
     fn parse_parameter<T: BufRead>(
