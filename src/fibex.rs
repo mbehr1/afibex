@@ -40,23 +40,23 @@ impl fmt::Display for FibexError {
 impl Error for FibexError {}
 
 #[derive(Debug)]
-struct XmlElement {
+pub struct XmlElement {
     // todo might be optimized with ref/lifetimes instead of copies!
     // buf: Vec<u8>,
-    name: String,
+    pub name: String,
     attributes: Vec<(String, String)>,
     children: Vec<XmlElement>,
-    text: Option<String>,
+    pub text: Option<String>,
 }
 
 impl XmlElement {
-    fn attr(&self, name: &str) -> Option<&(String, String)> {
+    pub fn attr(&self, name: &str) -> Option<&(String, String)> {
         self.attributes
             .iter()
             .find(|p| p.0 == name || (p.0.len() > name.len() && p.0.ends_with(name)))
         // todo and longer char = :?
     }
-    fn child_by_name(&self, name: &str) -> Option<&XmlElement> {
+    pub fn child_by_name(&self, name: &str) -> Option<&XmlElement> {
         self.children.iter().find(|c| c.name == name)
     }
 }
@@ -151,6 +151,74 @@ pub struct Project {
     pub short_name: Option<String>,
 }
 
+/// fx:ECU-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
+/// It's a fx:REVISED-ELEMENT-TYPE extended by:
+///  - opt fx:DIAGNOSTIC-ADDRESSES
+///  - opt FUNCTION-REFS
+///  - opt CONTROLLERS
+///  - opt CONNECTORS
+///  - opt fx:MANUFACTURER-ECU-EXTENSION
+///
+#[derive(Debug)]
+pub struct Ecu {
+    pub id: String,
+    pub short_name: Option<String>,
+    pub desc: Option<String>,
+    pub manufacturer_extension: Option<XmlElement>,
+}
+
+/// fx:FRAME-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
+/// It's a fx:REVISED-ELEMENT-TYPE extended by:
+/// - BYTE-LENGTH: xs:unsignedInt
+/// - opt FRAME-TYPE: fx:FRAMETYPE
+/// - opt PDU-INSTANCES: fx:PDU-INSTANCES
+/// - opt MANUFACTURER-EXTENSION: fx:MANUFACTURER-FRAME-EXTENSION
+#[derive(Debug)]
+pub struct Frame {
+    pub id: String,
+    pub short_name: Option<String>,
+    pub desc: Option<String>,
+    pub byte_length: u32,
+    pub frame_type: Option<String>,      // todo proper type?
+    pub pdu_instances: Vec<PduInstance>, // todo already sorted by sequence-number
+    pub manufacturer_extension: Option<XmlElement>,
+}
+
+/// fx:GENERIC-PDU-INSTANCE-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
+/// It's a fx:IDENTIFIABLE-ELEMENT-TYPE extended by:
+/// - PDU-REF: fx:PDU-REF
+/// - opt manufacturer_extension: Option<XmlElement>,
+#[derive(Debug)]
+pub struct PduInstance {
+    pub pdu_ref: String,
+    // indirectly by Vec order. pub sequence_number: u32,
+}
+
+/// todo proper type/doc
+#[derive(Debug)]
+pub struct SignalInstance {
+    pub signal_ref: String,
+    // indirectly by Vec order. pub sequence_number: u32,
+}
+
+/// fx:PDU-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
+/// It's a fx:REVISED-ELEMENT-TYPE extended by:
+/// - byte-length: xs:unsignedInt
+/// - pdu-type: fx:PDUTYPE (see the missing -)
+/// - opt signal-instances
+/// - opt multiplexer
+/// - opt manufacturer-extension
+#[derive(Debug)]
+pub struct Pdu {
+    // pub id: String, // duplicate? indirectly from pdus_map_by_id?
+    pub short_name: Option<String>,
+    pub desc: Option<String>,
+    pub byte_length: u32,
+    pub pdu_type: String, // todo better PDUTYPE?
+    pub signal_instances: Vec<SignalInstance>,
+    pub manufacturer_extension: Option<XmlElement>,
+}
+
 /// all elements are derived from fibex: REVISED-ELEMENT-TYPE containing:
 /// - fx:NAMED-ELEMENT-TYPE with
 ///    - fx:IDENTIFIABLE-ELEMENT-TYPE optional attribute OID
@@ -158,11 +226,12 @@ pub struct Project {
 ///      - EXTERNAL-REFERENCES Option
 /// - ELEMENT-REVISIONS: Option
 /// - PRODUCT-REF: Option
-///
 #[derive(Debug)]
 pub struct Elements {
     // channels
-    // ecus
+    pub ecus: Vec<Ecu>,
+    pub pdus_map_by_id: HashMap<String, Pdu>,
+    pub frames_map_by_id: HashMap<String, Frame>,
     pub services_map_by_sid_major: HashMap<(u16, u8), Vec<Service>>,
     pub datatypes_map_by_id: HashMap<String, Datatype>,
 }
@@ -456,6 +525,9 @@ impl FibexData {
         FibexData {
             projects: vec![],
             elements: Elements {
+                ecus: Vec::new(),
+                pdus_map_by_id: HashMap::new(),
+                frames_map_by_id: HashMap::new(),
                 datatypes_map_by_id: HashMap::new(),
                 services_map_by_sid_major: HashMap::new(),
             },
@@ -551,6 +623,10 @@ impl FibexData {
                     // todo CHANNELS, ECUS, PACKAGES
                     b"SERVICE-INTERFACES" => self.parse_service_interfaces(e, reader)?,
                     b"DATATYPES" => self.parse_datatypes(e, reader)?,
+                    b"ECUS" | b"FRAMES" | b"PDUS" => {} // ignore, fall through
+                    b"ECU" => self.parse_ecu(e, reader)?,
+                    b"FRAME" => self.parse_frame(e, reader)?,
+                    b"PDU" => self.parse_pdu(e, reader)?,
                     _ => {
                         println!(
                             "parse_elements: Event::Start of unknown '{}'",
@@ -715,6 +791,281 @@ impl FibexData {
             methods_by_mid,
         };
         Ok(si)
+    }
+
+    fn parse_ecu<T: BufRead>(
+        &mut self,
+        e_si: &quick_xml::events::BytesStart,
+        reader: &mut Reader<T>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut buf = Vec::with_capacity(64 * 1024); // todo better default
+        let mut short_name: Option<String> = None;
+        let mut desc: Option<String> = None;
+        let mut manufacturer_extension: Option<XmlElement> = None;
+
+        let id = e_si
+            .attributes()
+            .flatten()
+            .find(|a| a.key == b"ID")
+            .and_then(|attribute| String::from_utf8(attribute.value.to_vec()).ok())
+            .ok_or_else(|| FibexError::new("ID missing in ECU"))?;
+
+        loop {
+            match reader.read_event(&mut buf)? {
+                Event::Start(ref e) => match e.local_name() {
+                    b"SHORT-NAME" => {
+                        short_name = Some(reader.read_text(e.name(), &mut Vec::new())?)
+                    }
+                    b"DESC" => desc = Some(reader.read_text(e.name(), &mut Vec::new())?),
+                    b"MANUFACTURER-EXTENSION" => {
+                        manufacturer_extension = Some(read_element(e, reader, false)?)
+                    }
+                    _ => {
+                        println!(
+                            "parse_ecu: Event::Start of unknown '{}'",
+                            String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                        );
+                        skip_element(e, reader)?
+                    }
+                },
+                Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
+                Event::Empty(ref e) => println!(
+                    "parse_ecu: Event::Empty of unknown '{}'",
+                    String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                ),
+                Event::End(ref e) if e.local_name() == e_si.local_name() => break,
+                _ => {}
+            }
+        }
+        let ecu = Ecu {
+            id,
+            short_name,
+            desc,
+            manufacturer_extension,
+        };
+        self.elements.ecus.push(ecu);
+        Ok(())
+    }
+
+    fn parse_frame<T: BufRead>(
+        &mut self,
+        e_si: &quick_xml::events::BytesStart,
+        reader: &mut Reader<T>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut buf = Vec::with_capacity(16 * 1024); // todo better default
+        let mut short_name: Option<String> = None;
+        let mut desc: Option<String> = None;
+        let mut manufacturer_extension: Option<XmlElement> = None;
+        let mut byte_length: Option<u32> = None;
+        let mut frame_type: Option<String> = None;
+        let mut pdu_instances = vec![];
+
+        let id = e_si
+            .attributes()
+            .flatten()
+            .find(|a| a.key == b"ID")
+            .and_then(|attribute| String::from_utf8(attribute.value.to_vec()).ok())
+            .ok_or_else(|| FibexError::new("ID missing in FRAME"))?;
+
+        loop {
+            match reader.read_event(&mut buf)? {
+                Event::Start(ref e) => match e.local_name() {
+                    b"SHORT-NAME" => {
+                        short_name = Some(reader.read_text(e.name(), &mut Vec::new())?)
+                    }
+                    b"DESC" => desc = Some(reader.read_text(e.name(), &mut Vec::new())?),
+                    b"FRAME-TYPE" => {
+                        frame_type = Some(reader.read_text(e.name(), &mut Vec::new())?)
+                    }
+                    b"BYTE-LENGTH" => {
+                        byte_length = Some(
+                            reader
+                                .read_text(e.name(), &mut Vec::new())?
+                                .parse::<u32>()?,
+                        )
+                    }
+                    b"MANUFACTURER-EXTENSION" => {
+                        manufacturer_extension = Some(read_element(e, reader, false)?)
+                    }
+                    b"PDU-INSTANCES" => {} // ignore and process PDU-INSTANCE directly here
+                    b"PDU-INSTANCE" => {
+                        let pdu_i = read_element(e, reader, false)?;
+
+                        let pdu_ref = pdu_i
+                            .child_by_name("PDU-REF")
+                            .and_then(|e| e.attr("ID-REF"))
+                            .map(|a| a.1.to_owned())
+                            .ok_or_else(|| {
+                                FibexError::new("pdu_ref missing in FRAME/PDU-INSTACNE")
+                            })?;
+                        let sequence_nr = pdu_i
+                            .child_by_name("SEQUENCE-NUMBER")
+                            .and_then(|e| e.text.as_ref())
+                            .and_then(|e| e.parse::<u32>().ok())
+                            .ok_or_else(|| {
+                                FibexError::new("SEQUENCE-NR missing in FRAME/PDU-INSTANCE")
+                            })?;
+
+                        if pdu_instances.len() as u32 != sequence_nr {
+                            return Err(FibexError {
+                                msg: format!(
+                                    "SEQUENCE-NR {} vs {} mismatch in FRAME/PDU-INSTANCE",
+                                    sequence_nr,
+                                    pdu_instances.len()
+                                ),
+                            }
+                            .into());
+                        }
+                        pdu_instances.push(PduInstance { pdu_ref });
+                    }
+                    _ => {
+                        println!(
+                            "parse_frame: Event::Start of unknown '{}'",
+                            String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                        );
+                        skip_element(e, reader)?
+                    }
+                },
+                Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
+                Event::Empty(ref e) => println!(
+                    "parse_frame: Event::Empty of unknown '{}'",
+                    String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                ),
+                Event::End(ref e) if e.local_name() == e_si.local_name() => break,
+                _ => {}
+            }
+        }
+
+        let byte_length = if let Some(byte_length) = byte_length {
+            byte_length
+        } else {
+            return Err(FibexError::new("BYTE-LENGTH missing in FRAME").into());
+        };
+
+        let frame = Frame {
+            id,
+            short_name,
+            desc,
+            byte_length,
+            frame_type,
+            pdu_instances,
+            manufacturer_extension,
+        };
+        self.elements
+            .frames_map_by_id
+            .insert(frame.id.clone(), frame);
+        Ok(())
+    }
+
+    fn parse_pdu<T: BufRead>(
+        &mut self,
+        e_si: &quick_xml::events::BytesStart,
+        reader: &mut Reader<T>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut buf = Vec::with_capacity(16 * 1024); // todo better default
+        let mut short_name: Option<String> = None;
+        let mut desc: Option<String> = None;
+        let mut manufacturer_extension: Option<XmlElement> = None;
+        let mut byte_length: Option<u32> = None;
+        let mut pdu_type: Option<String> = None;
+        let mut signal_instances = vec![];
+
+        let id = e_si
+            .attributes()
+            .flatten()
+            .find(|a| a.key == b"ID")
+            .and_then(|attribute| String::from_utf8(attribute.value.to_vec()).ok())
+            .ok_or_else(|| FibexError::new("ID missing in PDU"))?;
+
+        loop {
+            match reader.read_event(&mut buf)? {
+                Event::Start(ref e) => match e.local_name() {
+                    b"SHORT-NAME" => {
+                        short_name = Some(reader.read_text(e.name(), &mut Vec::new())?)
+                    }
+                    b"DESC" => desc = Some(reader.read_text(e.name(), &mut Vec::new())?),
+                    b"PDU-TYPE" => pdu_type = Some(reader.read_text(e.name(), &mut Vec::new())?),
+                    b"BYTE-LENGTH" => {
+                        byte_length = Some(
+                            reader
+                                .read_text(e.name(), &mut Vec::new())?
+                                .parse::<u32>()?,
+                        )
+                    }
+                    b"MANUFACTURER-EXTENSION" => {
+                        manufacturer_extension = Some(read_element(e, reader, false)?)
+                    }
+                    b"SIGNAL-INSTANCES" => {} // ignore and process PDU-INSTANCE directly here
+                    b"SIGNAL-INSTANCE" => {
+                        let pdu_i = read_element(e, reader, false)?;
+
+                        let signal_ref = pdu_i
+                            .child_by_name("SIGNAL-REF")
+                            .and_then(|e| e.attr("ID-REF"))
+                            .map(|a| a.1.to_owned())
+                            .ok_or_else(|| {
+                                FibexError::new("SIGNAL-REF missing in FRAME/SIGNAL-INSTACNE")
+                            })?;
+                        let sequence_nr = pdu_i
+                            .child_by_name("SEQUENCE-NUMBER")
+                            .and_then(|e| e.text.as_ref())
+                            .and_then(|e| e.parse::<u32>().ok())
+                            .ok_or_else(|| {
+                                FibexError::new("SEQUENCE-NR missing in FRAME/SIGNAL-INSTANCE")
+                            })?;
+
+                        if signal_instances.len() as u32 != sequence_nr {
+                            return Err(FibexError {
+                                msg: format!(
+                                    "SEQUENCE-NR {} vs {} mismatch in FRAME/SIGNAL-INSTANCE",
+                                    sequence_nr,
+                                    signal_instances.len()
+                                ),
+                            }
+                            .into());
+                        }
+                        signal_instances.push(SignalInstance { signal_ref });
+                    }
+                    _ => {
+                        println!(
+                            "parse_pdu: Event::Start of unknown '{}'",
+                            String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                        );
+                        skip_element(e, reader)?
+                    }
+                },
+                Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
+                Event::Empty(ref e) => println!(
+                    "parse_pdu: Event::Empty of unknown '{}'",
+                    String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                ),
+                Event::End(ref e) if e.local_name() == e_si.local_name() => break,
+                _ => {}
+            }
+        }
+
+        let byte_length = if let Some(byte_length) = byte_length {
+            byte_length
+        } else {
+            return Err(FibexError::new("BYTE-LENGTH missing in PDU").into());
+        };
+        let pdu_type = if let Some(pdu_type) = pdu_type {
+            pdu_type
+        } else {
+            return Err(FibexError::new("PDU-TYPE missing in PDU").into());
+        };
+
+        let pdu = Pdu {
+            //id,
+            short_name,
+            desc,
+            byte_length,
+            pdu_type,
+            signal_instances,
+            manufacturer_extension,
+        };
+        self.elements.pdus_map_by_id.insert(id, pdu);
+        Ok(())
     }
 
     fn parse_method<T: BufRead>(
@@ -1441,7 +1792,7 @@ mod tests {
         if let DatatypeType::ComplexType(cdt) = dt {
             assert!(cdt.members.len() == 2)
         } else {
-            assert!(false)
+            panic!()
         }
 
         println!("fb={:?}", fb);
