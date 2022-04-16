@@ -627,6 +627,7 @@ impl FibexData {
                     b"ECU" => self.parse_ecu(e, reader)?,
                     b"FRAME" => self.parse_frame(e, reader)?,
                     b"PDU" => self.parse_pdu(e, reader)?,
+                    b"CHANNELS" => skip_element(e, reader)?, // todo
                     _ => {
                         println!(
                             "parse_elements: Event::Start of unknown '{}'",
@@ -820,6 +821,7 @@ impl FibexData {
                     b"MANUFACTURER-EXTENSION" => {
                         manufacturer_extension = Some(read_element(e, reader, false)?)
                     }
+                    b"CONNECTORS" => skip_element(e, reader)?, // todo
                     _ => {
                         println!(
                             "parse_ecu: Event::Start of unknown '{}'",
