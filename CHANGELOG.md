@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.3.0 - 2022-04-16
+#### Features
+- support Ecu, Frame, Pdu - (8b10c76) - Matthias Behr
+- - -
+
 ## v0.2.1 - 2022-03-31
 #### Bug Fixes
 - keep Event vs Method info - (87edfe5) - Matthias Behr
