@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.3.2 - 2022-04-18
+#### Bug Fixes
+- make XmlElement children pub accessible - (282a71e) - Matthias Behr
+- - -
+
 ## v0.3.1 - 2022-04-16
 #### Bug Fixes
 - silence CHANNELS, CONNECTORS logs - (7de3094) - Matthias Behr
