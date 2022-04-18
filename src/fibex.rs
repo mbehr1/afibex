@@ -45,7 +45,7 @@ pub struct XmlElement {
     // buf: Vec<u8>,
     pub name: String,
     attributes: Vec<(String, String)>,
-    children: Vec<XmlElement>,
+    pub children: Vec<XmlElement>,
     pub text: Option<String>,
 }
 
