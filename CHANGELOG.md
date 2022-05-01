@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.4.0 - 2022-05-01
+#### Bug Fixes
+- attr returned wrong attr in namespace cases - (3979213) - Matthias Behr
+#### Features
+- add Channel and Signals - (f642ddc) - Matthias Behr
+- - -
+
 ## v0.3.2 - 2022-04-18
 #### Bug Fixes
 - make XmlElement children pub accessible - (282a71e) - Matthias Behr
