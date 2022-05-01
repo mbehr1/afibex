@@ -53,11 +53,21 @@ impl XmlElement {
     pub fn attr(&self, name: &str) -> Option<&(String, String)> {
         self.attributes
             .iter()
-            .find(|p| p.0 == name || (p.0.len() > name.len() && p.0.ends_with(name)))
+            .find(|p| p.0 == name || (p.0.len() > name.len() && XmlElement::non_dotted_name(&p.0) ==name))
         // todo and longer char = :?
     }
     pub fn child_by_name(&self, name: &str) -> Option<&XmlElement> {
         self.children.iter().find(|c| c.name == name)
+    }
+
+    /// return the name after the ':' or the full name
+    fn non_dotted_name(name: &str) -> &str {
+        if let Some(idx) =  name.rfind(':') {
+            if idx < name.len() {
+                return &name[idx+1..]
+            }
+        }
+        name
     }
 }
 
@@ -1775,6 +1785,17 @@ pub fn get_all_fibex_in_dir(dir: &Path, recursive: bool) -> Result<Vec<PathBuf>,
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn non_dotted_name() {
+        assert_eq!(XmlElement::non_dotted_name("foo"), "foo");
+        assert_eq!(XmlElement::non_dotted_name(":foo"), "foo");
+        assert_eq!(XmlElement::non_dotted_name(":"), "");
+        assert_eq!(XmlElement::non_dotted_name(""), "");
+        assert_eq!(XmlElement::non_dotted_name("ho:"), "");
+        assert_eq!(XmlElement::non_dotted_name("ho:OID"), "OID");
+        assert_eq!(XmlElement::non_dotted_name("ho:OID:ID"), "ID"); // last dot
+    }
 
     #[test]
     fn load_fibex1() {
