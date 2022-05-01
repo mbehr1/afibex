@@ -2,7 +2,8 @@
 //
 // todos:
 // [ ] test importing multiple fibex for the same services but with different version (diff major, diff minor only)
-//
+// [ ] test importing multiple fibex for the same/similar channels/frames
+// [ ] support LONG-NAME: parse as array to lang <ho:LONG-NAME xml:lang="en">ABCDE</ho:LONG-NAME>
 
 use quick_xml::{events::Event, Reader};
 
@@ -51,13 +52,22 @@ pub struct XmlElement {
 
 impl XmlElement {
     pub fn attr(&self, name: &str) -> Option<&(String, String)> {
-        self.attributes
-            .iter()
-            .find(|p| p.0 == name || (p.0.len() > name.len() && p.0.ends_with(name)))
-        // todo and longer char = :?
+        self.attributes.iter().find(|p| {
+            p.0 == name || (p.0.len() > name.len() && XmlElement::non_dotted_name(&p.0) == name)
+        })
     }
     pub fn child_by_name(&self, name: &str) -> Option<&XmlElement> {
         self.children.iter().find(|c| c.name == name)
+    }
+
+    /// return the name after the ':' or the full name
+    fn non_dotted_name(name: &str) -> &str {
+        if let Some(idx) = name.rfind(':') {
+            if idx < name.len() {
+                return &name[idx + 1..];
+            }
+        }
+        name
     }
 }
 
@@ -151,6 +161,22 @@ pub struct Project {
     pub short_name: Option<String>,
 }
 
+/// fx:CHANNEL-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
+/// It's a fx:REVISED-ELEMENT-TYPE extended by:
+///  - opt fx:PDU-TRIGGERINGS
+///  - opt fx:FRAME-TRIGGERINGS
+///  - opt fx:MANUFACTURER-ECU-EXTENSION
+///
+#[derive(Debug)]
+pub struct Channel {
+    pub id: String,
+    pub short_name: Option<String>,
+    pub desc: Option<String>,
+    // frame_triggerings todo, lets store the identifier->frame-ref mapping only for now for u32 based identifiers
+    pub frame_ref_by_frame_triggering_identifier: HashMap<u32, String>,
+    pub manufacturer_extension: Option<XmlElement>,
+}
+
 /// fx:ECU-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
 /// It's a fx:REVISED-ELEMENT-TYPE extended by:
 ///  - opt fx:DIAGNOSTIC-ADDRESSES
@@ -184,6 +210,23 @@ pub struct Frame {
     pub manufacturer_extension: Option<XmlElement>,
 }
 
+/// fx:SIGNAL-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
+/// It's a fx:REVISED-ELEMENT-TYPE extended by:
+/// - opt DEFAULT-VALUE xs:double
+/// - CODING-REF
+/// - opt SIGNAL-TYPE fx:SIGNAL-TYPE-TYPE
+/// - opt PRIORITY xs:positiveInteger
+/// - opt ECU-SENDING-BEHAVIORS fx:ECU-SENDING-BEHAVIORS
+/// - opt MANUFACTURER-EXTENSION: fx:MANUFACTURER-FRAME-EXTENSION
+#[derive(Debug)]
+pub struct Signal {
+    pub id: String,
+    pub short_name: Option<String>,
+    pub desc: Option<String>,
+    pub coding_ref: String,
+    pub manufacturer_extension: Option<XmlElement>,
+}
+
 /// fx:GENERIC-PDU-INSTANCE-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
 /// It's a fx:IDENTIFIABLE-ELEMENT-TYPE extended by:
 /// - PDU-REF: fx:PDU-REF
@@ -192,6 +235,8 @@ pub struct Frame {
 pub struct PduInstance {
     pub pdu_ref: String,
     // indirectly by Vec order. pub sequence_number: u32,
+    pub bit_position: Option<u32>,
+    pub is_high_low_byte_order: Option<bool>,
 }
 
 /// todo proper type/doc
@@ -199,6 +244,7 @@ pub struct PduInstance {
 pub struct SignalInstance {
     pub signal_ref: String,
     // indirectly by Vec order. pub sequence_number: u32,
+    pub bit_position: Option<u32>,
 }
 
 /// fx:PDU-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
@@ -228,10 +274,11 @@ pub struct Pdu {
 /// - PRODUCT-REF: Option
 #[derive(Debug)]
 pub struct Elements {
-    // channels
+    pub channels: HashMap<String, Channel>,
     pub ecus: Vec<Ecu>,
     pub pdus_map_by_id: HashMap<String, Pdu>,
     pub frames_map_by_id: HashMap<String, Frame>,
+    pub signals_map_by_id: HashMap<String, Signal>,
     pub services_map_by_sid_major: HashMap<(u16, u8), Vec<Service>>,
     pub datatypes_map_by_id: HashMap<String, Datatype>,
 }
@@ -525,11 +572,13 @@ impl FibexData {
         FibexData {
             projects: vec![],
             elements: Elements {
+                channels: HashMap::new(),
                 ecus: Vec::new(),
                 pdus_map_by_id: HashMap::new(),
                 frames_map_by_id: HashMap::new(),
                 datatypes_map_by_id: HashMap::new(),
                 services_map_by_sid_major: HashMap::new(),
+                signals_map_by_id: HashMap::new(),
             },
             pi: ProcessingInformation {
                 codings: HashMap::new(),
@@ -579,6 +628,7 @@ impl FibexData {
                             "parse_fibex: unprocessed Event::Start of '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
                         );
+                        skip_element(e, reader)?;
                     }
                 },
                 Event::Empty(ref e) => println!(
@@ -623,11 +673,12 @@ impl FibexData {
                     // todo CHANNELS, ECUS, PACKAGES
                     b"SERVICE-INTERFACES" => self.parse_service_interfaces(e, reader)?,
                     b"DATATYPES" => self.parse_datatypes(e, reader)?,
-                    b"ECUS" | b"FRAMES" | b"PDUS" => {} // ignore, fall through
+                    b"CHANNELS" | b"ECUS" | b"FRAMES" | b"PDUS" | b"SIGNALS" => {} // ignore, fall through
                     b"ECU" => self.parse_ecu(e, reader)?,
                     b"FRAME" => self.parse_frame(e, reader)?,
+                    b"SIGNAL" => self.parse_signal(e, reader)?,
                     b"PDU" => self.parse_pdu(e, reader)?,
-                    b"CHANNELS" => skip_element(e, reader)?, // todo
+                    b"CHANNEL" => self.parse_channel(e, reader)?,
                     _ => {
                         println!(
                             "parse_elements: Event::Start of unknown '{}'",
@@ -794,6 +845,106 @@ impl FibexData {
         Ok(si)
     }
 
+    fn parse_channel<T: BufRead>(
+        &mut self,
+        e_si: &quick_xml::events::BytesStart,
+        reader: &mut Reader<T>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut buf = Vec::with_capacity(1024 * 1024); // todo better default they are large
+        let mut short_name: Option<String> = None;
+        let mut desc: Option<String> = None;
+        let mut frame_ref_by_frame_triggering_identifier = HashMap::new();
+        let mut manufacturer_extension: Option<XmlElement> = None;
+
+        let id = e_si
+            .attributes()
+            .flatten()
+            .find(|a| a.key == b"ID")
+            .and_then(|attribute| String::from_utf8(attribute.value.to_vec()).ok())
+            .ok_or_else(|| FibexError::new("ID missing in CHANNEL"))?;
+
+        loop {
+            match reader.read_event(&mut buf)? {
+                Event::Start(ref e) => match e.local_name() {
+                    b"SHORT-NAME" => {
+                        short_name = Some(reader.read_text(e.name(), &mut Vec::new())?)
+                    }
+                    b"DESC" => desc = Some(reader.read_text(e.name(), &mut Vec::new())?),
+                    b"MANUFACTURER-EXTENSION" => {
+                        manufacturer_extension = Some(read_element(e, reader, false)?)
+                    }
+                    b"PDU-TRIGGERINGS" => skip_element(e, reader)?, // todo
+                    b"LONG-NAME" | b"ELEMENT-REVISIONS" | b"FLEXRAY-CHANNEL-NAME" => {
+                        skip_element(e, reader)?
+                    } // todo add once needed
+                    b"FRAME-TRIGGERINGS" => {}                      // fallthrough
+                    b"FRAME-TRIGGERING" => {
+                        // for now we dont read the full element but just the IDENTIFIER / FRAME-REF mapping
+                        let ft = read_element(e, reader, false)?;
+                        let identifier = ft
+                            .child_by_name("IDENTIFIER")
+                            .and_then(|identifier| identifier.child_by_name("IDENTIFIER-VALUE"))
+                            .and_then(|value| value.text.as_ref())
+                            .and_then(|text| text.parse::<u32>().ok());
+                        if let Some(identifier) = identifier {
+                            if identifier > 0 {
+                                let frame_ref = ft
+                                    .child_by_name("FRAME-REF")
+                                    .and_then(|e| e.attr("ID-REF"))
+                                    .map(|a| a.1.to_owned());
+                                if let Some(frame_ref) = frame_ref {
+                                    // insert mapping
+                                    frame_ref_by_frame_triggering_identifier
+                                        .insert(identifier, frame_ref);
+                                } else {
+                                    println!(
+                                    "parse_channel: ignoring FRAME-TRIGGERING ID'{:?}' due to missing FRAME-REF",
+                                    ft.attr("ID")
+                                )
+                                }
+                            } else {
+                                println!(
+                                    "parse_channel: ignoring FRAME-TRIGGERING ID'{:?}' due to IDENTIFIER=0",
+                                    ft.attr("ID")
+                                )
+                            }
+                        } /* quite common case for e.g. flexray else{
+                              println!(
+                                  "parse_channel: ignoring FRAME-TRIGGERING ID'{:?}' due to missing IDENTIFIER",
+                                  ft.attr("ID")
+                              )
+                          }*/
+                    }
+                    _ => {
+                        println!(
+                            "parse_channel: Event::Start of unknown '{}'",
+                            String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                        );
+                        skip_element(e, reader)?
+                    }
+                },
+                Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
+                Event::Empty(ref e) => println!(
+                    "parse_channel: Event::Empty of unknown '{}'",
+                    String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                ),
+                Event::End(ref e) if e.local_name() == e_si.local_name() => break,
+                _ => {}
+            }
+        }
+        let channel = Channel {
+            id,
+            short_name,
+            desc,
+            frame_ref_by_frame_triggering_identifier,
+            manufacturer_extension,
+        };
+        self.elements
+            .channels
+            .insert(channel.id.to_owned(), channel);
+        Ok(())
+    }
+
     fn parse_ecu<T: BufRead>(
         &mut self,
         e_si: &quick_xml::events::BytesStart,
@@ -822,6 +973,10 @@ impl FibexData {
                         manufacturer_extension = Some(read_element(e, reader, false)?)
                     }
                     b"CONNECTORS" => skip_element(e, reader)?, // todo
+                    b"LONG-NAME"
+                    | b"ELEMENT-REVISIONS"
+                    | b"DIAGNOSTIC-ADDRESSES"
+                    | b"CONTROLLERS" => skip_element(e, reader)?, // todo add once needed
                     _ => {
                         println!(
                             "parse_ecu: Event::Start of unknown '{}'",
@@ -904,10 +1059,22 @@ impl FibexData {
                             .child_by_name("SEQUENCE-NUMBER")
                             .and_then(|e| e.text.as_ref())
                             .and_then(|e| e.parse::<u32>().ok())
-                            .ok_or_else(|| {
-                                FibexError::new("SEQUENCE-NR missing in FRAME/PDU-INSTANCE")
+                            .or(Some(pdu_instances.len() as u32)) // assert BIT-POSITION?
+                            .ok_or_else(|| FibexError {
+                                msg: format!(
+                                    "SEQUENCE-NR missing in FRAME/PDU-INSTANCE short_name={:?}",
+                                    short_name
+                                ),
                             })?;
 
+                        let bit_position = pdu_i
+                            .child_by_name("BIT-POSITION")
+                            .and_then(|e| e.text.as_ref())
+                            .and_then(|e| e.parse::<u32>().ok());
+                        let is_high_low_byte_order = pdu_i
+                            .child_by_name("IS-HIGH-LOW-BYTE-ORDER")
+                            .and_then(|e| e.text.as_deref())
+                            .and_then(|t| t.parse::<bool>().ok()); // todo handle errors? (instead of ok!)
                         if pdu_instances.len() as u32 != sequence_nr {
                             return Err(FibexError {
                                 msg: format!(
@@ -918,8 +1085,14 @@ impl FibexData {
                             }
                             .into());
                         }
-                        pdu_instances.push(PduInstance { pdu_ref });
+                        pdu_instances.push(PduInstance {
+                            pdu_ref,
+                            bit_position,
+                            is_high_low_byte_order,
+                        });
                     }
+                    b"LONG-NAME" => skip_element(e, reader)?, // todo
+                    b"ELEMENT-REVISIONS" => skip_element(e, reader)?,
                     _ => {
                         println!(
                             "parse_frame: Event::Start of unknown '{}'",
@@ -956,6 +1129,80 @@ impl FibexData {
         self.elements
             .frames_map_by_id
             .insert(frame.id.clone(), frame);
+        Ok(())
+    }
+
+    fn parse_signal<T: BufRead>(
+        &mut self,
+        e_si: &quick_xml::events::BytesStart,
+        reader: &mut Reader<T>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut buf = Vec::with_capacity(512); // todo better default
+        let mut short_name: Option<String> = None;
+        let mut desc: Option<String> = None;
+        let mut manufacturer_extension: Option<XmlElement> = None;
+        let mut coding_ref = None;
+
+        let id = e_si
+            .attributes()
+            .flatten()
+            .find(|a| a.key == b"ID")
+            .and_then(|attribute| String::from_utf8(attribute.value.to_vec()).ok())
+            .ok_or_else(|| FibexError::new("ID missing in SIGNAL"))?;
+
+        loop {
+            match reader.read_event(&mut buf)? {
+                Event::Start(ref e) => match e.local_name() {
+                    b"SHORT-NAME" => {
+                        short_name = Some(reader.read_text(e.name(), &mut Vec::new())?)
+                    }
+                    b"DESC" => desc = Some(reader.read_text(e.name(), &mut Vec::new())?),
+                    b"MANUFACTURER-EXTENSION" => {
+                        manufacturer_extension = Some(read_element(e, reader, false)?)
+                    }
+                    b"LONG-NAME" => skip_element(e, reader)?, // todo
+                    b"ELEMENT-REVISIONS" | b"SIGNAL-TYPE" => skip_element(e, reader)?,
+                    _ => {
+                        println!(
+                            "parse_signal: Event::Start of unknown '{}'",
+                            String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                        );
+                        skip_element(e, reader)?
+                    }
+                },
+                Event::Empty(ref e) if e.local_name() == b"CODING-REF" => {
+                    let r = read_element(e, reader, true)?;
+                    if let Some((_k, v)) = r.attr("ID-REF") {
+                        // ID-REF is mandatory according to fibex.xsd todo could throw error if not
+                        coding_ref = Some(v.to_owned());
+                    }
+                }
+                Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
+                Event::Empty(ref e) => println!(
+                    "parse_signal: Event::Empty of unknown '{}'",
+                    String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                ),
+                Event::End(ref e) if e.local_name() == e_si.local_name() => break,
+                _ => {}
+            }
+        }
+
+        let coding_ref = if let Some(coding_ref) = coding_ref {
+            coding_ref
+        } else {
+            return Err(FibexError::new("CODING-REF missing in SIGNAL").into());
+        };
+
+        let signal = Signal {
+            id,
+            short_name,
+            desc,
+            coding_ref,
+            manufacturer_extension,
+        };
+        self.elements
+            .signals_map_by_id
+            .insert(signal.id.clone(), signal);
         Ok(())
     }
 
@@ -1012,9 +1259,17 @@ impl FibexData {
                             .child_by_name("SEQUENCE-NUMBER")
                             .and_then(|e| e.text.as_ref())
                             .and_then(|e| e.parse::<u32>().ok())
-                            .ok_or_else(|| {
-                                FibexError::new("SEQUENCE-NR missing in FRAME/SIGNAL-INSTANCE")
+                            .or(Some(signal_instances.len() as u32)) // assert a BIT-POSITION then?
+                            .ok_or_else(|| FibexError {
+                                msg: format!(
+                                    "SEQUENCE-NR missing in FRAME/SIGNAL-INSTANCE, short_name={:?}",
+                                    short_name
+                                ),
                             })?;
+                        let bit_position = pdu_i
+                            .child_by_name("BIT-POSITION")
+                            .and_then(|e| e.text.as_ref())
+                            .and_then(|e| e.parse::<u32>().ok());
 
                         if signal_instances.len() as u32 != sequence_nr {
                             return Err(FibexError {
@@ -1026,8 +1281,13 @@ impl FibexData {
                             }
                             .into());
                         }
-                        signal_instances.push(SignalInstance { signal_ref });
+                        signal_instances.push(SignalInstance {
+                            signal_ref,
+                            bit_position,
+                        });
                     }
+                    b"LONG-NAME" => skip_element(e, reader)?, // todo
+                    b"ELEMENT-REVISIONS" => skip_element(e, reader)?, // todo
                     _ => {
                         println!(
                             "parse_pdu: Event::Start of unknown '{}'",
@@ -1775,6 +2035,17 @@ pub fn get_all_fibex_in_dir(dir: &Path, recursive: bool) -> Result<Vec<PathBuf>,
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn non_dotted_name() {
+        assert_eq!(XmlElement::non_dotted_name("foo"), "foo");
+        assert_eq!(XmlElement::non_dotted_name(":foo"), "foo");
+        assert_eq!(XmlElement::non_dotted_name(":"), "");
+        assert_eq!(XmlElement::non_dotted_name(""), "");
+        assert_eq!(XmlElement::non_dotted_name("ho:"), "");
+        assert_eq!(XmlElement::non_dotted_name("ho:OID"), "OID");
+        assert_eq!(XmlElement::non_dotted_name("ho:OID:ID"), "ID"); // last dot
+    }
 
     #[test]
     fn load_fibex1() {
