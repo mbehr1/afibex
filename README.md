@@ -7,6 +7,7 @@ It's used e.g. from crate [asomeip](https://github.com/mbehr1/asomeip/) to decod
 ## Features
 
 - Parse all elements needed to decode SOME/IP payload.
+- Parse all elements needed to decode CAN frames.
 - fast
 
 ## License
