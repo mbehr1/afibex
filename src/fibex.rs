@@ -551,8 +551,140 @@ pub struct Coding {
     pub short_name: Option<String>,
     // physical_type: Option
     pub coded_type: Option<CodedType>,
-    // compu-methods: Option
+    pub compu_methods: Vec<CompuMethod>,
     // manufacturer-extension: Option
+}
+
+/// ho: COMPU-METHOD, see https://www.asam.net/xml/harmonizedObjects.xsd
+/// - ho:NAME-DETAILS
+/// - CATEGORY ho:COMPU-CATEGORY
+/// - opt ho:UNIT-REF
+/// - opt phys_contraints ho:SCALE-CONSTR-TYPE
+/// - opt internal_constraints ho:SCALE-CONSTR-TYPE
+/// - opt compu_internal_to_phys
+///   - compu_scales array of ho:COMPU-SCALE
+///   - opt compu_default_value
+///
+#[derive(Debug)]
+pub struct CompuMethod {
+    pub category: CompuCategory,
+    pub internal_to_phys_scales: Vec<CompuScale>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CompuCategory {
+    Identical,
+    Linear,
+    ScaleLinear,
+    TextTable,
+    TabNointp,
+    Formula,
+    BitfieldTextTable, // new with ASAM MDF 4.2
+}
+
+/// enum representing more safely xs:double values
+///
+/// if possible we parse them into an i64 and if
+/// the value is e.g. provided with a . we use the f64
+#[derive(Debug, Clone)]
+pub enum XsDouble {
+    F64(f64),
+    I64(i64),
+}
+
+impl From<&str> for XsDouble {
+    fn from(value: &str) -> Self {
+        if value.contains('.') {
+            XsDouble::F64(value.parse::<f64>().unwrap_or(0f64))
+        } else {
+            XsDouble::I64(value.parse::<i64>().unwrap_or(0))
+        }
+    }
+}
+impl PartialEq for XsDouble {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            XsDouble::F64(a) => match other {
+                XsDouble::F64(b) => a == b,
+                XsDouble::I64(b) => *b as f64 == *a,
+            },
+            XsDouble::I64(a) => match other {
+                XsDouble::I64(b) => a == b,
+                XsDouble::F64(b) => *a as f64 == *b,
+            },
+        }
+    }
+}
+impl Eq for XsDouble {}
+
+impl PartialOrd for XsDouble {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self {
+            XsDouble::F64(a) => match other {
+                XsDouble::F64(b) => a.partial_cmp(b),
+                XsDouble::I64(b) => a.partial_cmp(&(*b as f64)),
+            },
+            XsDouble::I64(a) => match other {
+                XsDouble::I64(b) => a.partial_cmp(b),
+                XsDouble::F64(b) => (*a as f64).partial_cmp(b),
+            },
+        }
+    }
+}
+
+/// ho:INTERVAL-TYPE
+///  (xs:double, opt OPEN, CLOSED(default), INFINITE)
+#[derive(Debug)]
+pub struct IntervalType(std::ops::Bound<XsDouble>);
+
+impl From<&XmlElement> for IntervalType {
+    // parse e.g. <ho:LOWER-LIMIT INTERVAL-TYPE="CLOSED">1048576</ho:LOWER-LIMIT>
+    fn from(xml_e: &XmlElement) -> Self {
+        let v: XsDouble = xml_e.text.as_deref().unwrap_or("0").into();
+        let v2 = v.to_owned(); // bit weird, could be avoided...
+        let interval_type = xml_e
+            .attr("INTERVAL-TYPE")
+            .and_then(|a| match a.1.as_str() {
+                "OPEN" => Some(std::ops::Bound::Excluded(v)),
+                "INFINITE" => Some(std::ops::Bound::Unbounded),
+                "CLOSED" => Some(std::ops::Bound::Included(v)),
+                _ => None,
+            })
+            .unwrap_or(std::ops::Bound::Included(v2));
+        Self(interval_type)
+    }
+}
+
+impl IntervalType {
+    pub fn partial_cmp(&self, other: &XsDouble) -> Option<std::cmp::Ordering> {
+        match self {
+            IntervalType(std::ops::Bound::Unbounded) => Some(std::cmp::Ordering::Equal),
+            IntervalType(std::ops::Bound::Included(a)) => a.partial_cmp(other),
+            IntervalType(std::ops::Bound::Excluded(a)) => {
+                let c = a.partial_cmp(other);
+                if let Some(std::cmp::Ordering::Equal) = c {
+                    None
+                } else {
+                    c
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CompuScale {
+    // desc
+    pub mask: Option<u64>, // or better type for mask? (64 bits enough?)
+    pub lower_limit: Option<IntervalType>,
+    pub upper_limit: Option<IntervalType>,
+    pub compu_const: Option<VvT>, // todo not an option but an option of enum of COMPU-CONST, COMPU-RATIONAL-COEFFS, COMPU-GENERIC-MATH
+}
+
+#[derive(Debug, PartialEq)]
+pub enum VvT {
+    V(XsDouble),
+    VT(String),
 }
 
 #[derive(Debug)]
@@ -1882,9 +2014,93 @@ impl FibexData {
             coded_type: xml_e
                 .child_by_name("CODED-TYPE")
                 .and_then(|c| CodedType::from_xml(c).ok()), // todo dont discard the error!
+            compu_methods: xml_e
+                .child_by_name("COMPU-METHODS")
+                .map(|ms| {
+                    ms.children
+                        .iter()
+                        .filter_map(|m| CompuMethod::from_xml(m).ok())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default(),
         };
 
         Ok(cod)
+    }
+}
+
+impl CompuMethod {
+    fn from_xml(xml_e: &XmlElement) -> Result<CompuMethod, Box<dyn Error>> {
+        let category = xml_e
+            .child_by_name("CATEGORY")
+            .and_then(|c| c.text.as_deref());
+        let category = match category {
+            Some(cat) if cat == "IDENTICAL" => CompuCategory::Identical,
+            Some(cat) if cat == "BITFIELD-TEXTTABLE" => CompuCategory::BitfieldTextTable,
+            Some(cat) if cat == "LINEAR" => CompuCategory::Linear,
+            Some(cat) if cat == "TEXTTABLE" => CompuCategory::TextTable,
+            Some(cat) => {
+                println!("CompuMethod::from_xml: unknown CATEGORY {}", cat); // todo...
+                return Err(FibexError {
+                    msg: format!("CompuMethod: unknown CATEGORY {}", cat),
+                }
+                .into());
+            }
+            None => {
+                println!("CompuMethod::from_xml: missing CATEGORY"); // todo...
+                return Err(FibexError::new("CompuMethod: missing CATEGORY").into());
+            }
+        };
+        let internal_to_phys_scales = xml_e
+            .child_by_name("COMPU-INTERNAL-TO-PHYS")
+            .and_then(|c| c.child_by_name("COMPU-SCALES"))
+            .map(|s| {
+                s.children
+                    .iter()
+                    .filter_map(|s| CompuScale::from_xml(s).ok())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        Ok(CompuMethod {
+            category,
+            internal_to_phys_scales,
+        })
+    }
+}
+
+impl CompuScale {
+    fn from_xml(xml_e: &XmlElement) -> Result<CompuScale, Box<dyn Error>> {
+        let mask = xml_e
+            .child_by_name("MASK")
+            .and_then(|m| m.text.as_deref())
+            .and_then(|t| u64::from_str_radix(t, 2).ok());
+        let compu_const = xml_e
+            .child_by_name("COMPU-CONST")
+            .and_then(|c| {
+                if c.children.len() == 1 {
+                    Some(&c.children[0])
+                } else {
+                    None
+                }
+            })
+            .map(|c| (c.name.as_str(), c.text.as_deref().unwrap_or_default()))
+            .and_then(|(name, text)| match name {
+                "V" => Some(VvT::V(text.into())),
+                //"V" =>  text.parse::<f64>().ok().map(|v|VvT::V(v)),
+                "VT" => Some(VvT::VT(text.to_owned())),
+                _ => None,
+            });
+        // <ho:LOWER-LIMIT INTERVAL-TYPE="CLOSED">1048576</ho:LOWER-LIMIT>
+        let lower_limit = xml_e.child_by_name("LOWER-LIMIT").map(IntervalType::from);
+        let upper_limit = xml_e.child_by_name("LOWER-LIMIT").map(IntervalType::from);
+
+        Ok(CompuScale {
+            mask,
+            lower_limit,
+            upper_limit,
+            compu_const,
+        })
     }
 }
 
