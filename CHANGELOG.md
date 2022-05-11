@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.6.0 - 2022-05-11
+#### Features
+- add fmt::Display for CompuScale - (b2ea699) - Matthias Behr
+- - -
+
 ## v0.5.0 - 2022-05-08
 #### Features
 - add support for COMPU-METHODS - (e1fe56c) - Matthias Behr
