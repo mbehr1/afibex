@@ -635,7 +635,7 @@ impl PartialOrd for XsDouble {
 /// ho:INTERVAL-TYPE
 ///  (xs:double, opt OPEN, CLOSED(default), INFINITE)
 #[derive(Debug)]
-pub struct IntervalType(std::ops::Bound<XsDouble>);
+pub struct IntervalType(pub std::ops::Bound<XsDouble>);
 
 impl From<&XmlElement> for IntervalType {
     // parse e.g. <ho:LOWER-LIMIT INTERVAL-TYPE="CLOSED">1048576</ho:LOWER-LIMIT>
