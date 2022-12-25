@@ -571,7 +571,7 @@ pub struct CompuMethod {
     pub internal_to_phys_scales: Vec<CompuScale>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum CompuCategory {
     Identical,
     Linear,
@@ -681,7 +681,7 @@ pub struct CompuScale {
     pub compu_const: Option<VvT>, // todo not an option but an option of enum of COMPU-CONST, COMPU-RATIONAL-COEFFS, COMPU-GENERIC-MATH
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum VvT {
     V(XsDouble),
     VT(String),
