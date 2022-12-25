@@ -128,14 +128,14 @@ mod tests {
         let cs = CompuScale {
             mask: None,
             lower_limit: Some(IntervalType(Bound::Included(v1.clone()))),
-            upper_limit: Some(IntervalType(Bound::Excluded(v2.clone()))),
+            upper_limit: Some(IntervalType(Bound::Excluded(v2))),
             compu_const: Some(VvT::VT("foo".into())),
         };
         assert_eq!(format!("{}", cs).as_str(), "[42..43)-> \"foo\"");
         let cs = CompuScale {
             mask: None,
             lower_limit: Some(IntervalType(Bound::Included(v1.clone()))),
-            upper_limit: Some(IntervalType(Bound::Included(v1.clone()))),
+            upper_limit: Some(IntervalType(Bound::Included(v1))),
             compu_const: Some(VvT::V("-1.5".into())),
         };
         assert_eq!(format!("{}", cs).as_str(), "[42]-> -1.5");
