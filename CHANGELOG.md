@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.6.1 - 2022-12-25
+#### Miscellaneous Chores
+- update quick-xml - (f3d6bac) - Matthias Behr
+
+- - -
+
 ## v0.6.0 - 2022-05-11
 #### Features
 - add fmt::Display for CompuScale - (b2ea699) - Matthias Behr
