@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.6.2 - 2023-04-11
+#### Bug Fixes
+- merge frames from same channels - (af5ceae) - Matthias Behr
+
+- - -
+
 ## v0.6.1 - 2022-12-25
 #### Miscellaneous Chores
 - update quick-xml - (f3d6bac) - Matthias Behr

@@ -1,6 +1,6 @@
 [package]
 name = "afibex"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 authors = ["Matthias Behr"]
 license = "MIT OR Apache-2.0"
