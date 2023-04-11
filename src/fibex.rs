@@ -71,8 +71,8 @@ impl XmlElement {
     }
 }
 
-fn read_element<'a, T: BufRead>(
-    start_e: &'a quick_xml::events::BytesStart,
+fn read_element<T: BufRead>(
+    start_e: &quick_xml::events::BytesStart,
     reader: &mut Reader<T>,
     empty_element: bool,
 ) -> Result<XmlElement, Box<dyn Error>> {
@@ -121,8 +121,8 @@ fn read_element<'a, T: BufRead>(
     Ok(xml_e)
 }
 
-fn skip_element<'a, T: BufRead>(
-    start_e: &'a quick_xml::events::BytesStart,
+fn skip_element<T: BufRead>(
+    start_e: &quick_xml::events::BytesStart,
     reader: &mut Reader<T>,
 ) -> Result<(), Box<dyn Error>> {
     let mut nesting_level = 0u32;
@@ -1071,9 +1071,39 @@ impl FibexData {
             frame_ref_by_frame_triggering_identifier,
             manufacturer_extension,
         };
+        // does a channel with same id exist yet?
+        if let Some(exist_channel) = self.elements.channels.get_mut(&channel.id) {
+            // update/merge existing one:
+            match &exist_channel.short_name {
+                None => exist_channel.short_name = channel.short_name,
+                Some(exist_name) => {
+                    if let Some(new_name) = &channel.short_name {
+                        if new_name != exist_name {
+                            println!(
+                                "parse_channel: merge channel id '{}' different names exist: {} vs. new (ignored) {}", channel.id, exist_name, new_name
+                            );
+                        }
+                    }
+                }
+            }
+            if exist_channel.desc.is_none() {
+                exist_channel.desc = channel.desc;
+            }
+            if exist_channel.manufacturer_extension.is_none() {
+                exist_channel.manufacturer_extension = channel.manufacturer_extension;
+            }
+            // insert missing frames:
+            for new_chan in channel.frame_ref_by_frame_triggering_identifier.into_iter() {
+                exist_channel.frame_ref_by_frame_triggering_identifier.entry(new_chan.0)
+                .and_modify(|ref_id|{if ref_id != &new_chan.1 {
+                         println!("parse_channel: merge channel id '{}' frame {} different ref exist {} vs. {}", channel.id, new_chan.0, ref_id, new_chan.1);
+                    }}).or_insert(new_chan.1);
+            }
+        } else {
         self.elements
             .channels
             .insert(channel.id.to_owned(), channel);
+        }
         Ok(())
     }
 
