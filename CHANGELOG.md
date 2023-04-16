@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.7.0 - 2023-04-16
+#### Features
+- add CompuScale::getSingleValue - (8b3c139) - Matthias Behr
+
+- - -
+
 ## v0.6.2 - 2023-04-11
 #### Bug Fixes
 - merge frames from same channels - (af5ceae) - Matthias Behr
