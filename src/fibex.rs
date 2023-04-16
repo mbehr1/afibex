@@ -2132,6 +2132,26 @@ impl CompuScale {
             compu_const,
         })
     }
+
+    /// if the CompuScale represents a single value return that one else return None
+    /// 
+    /// A CompuScale represents a single value if:
+    ///   - lower_limit == upper_limit 
+    ///   - lower_limit type of INCLUDED
+    pub fn get_single_value(&self) -> Option<&XsDouble> {
+        if let Some(lower_limit) = &self.lower_limit {
+            if let std::ops::Bound::Included(lv) = &lower_limit.0 {
+                if let Some(upper_limit) = &self.upper_limit {
+                    if let std::ops::Bound::Included(uv) = &upper_limit.0 {
+                        if uv == lv {
+                            return Some(uv);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
 }
 
 impl CodedType {
