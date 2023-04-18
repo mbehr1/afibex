@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.8.0 - 2023-04-18
+#### Features
+- add is_high_low_byte_order to SignalInstance - (8d5265a) - Matthias Behr
+
+- - -
+
 ## v0.7.0 - 2023-04-16
 #### Features
 - add CompuScale::getSingleValue - (8b3c139) - Matthias Behr
