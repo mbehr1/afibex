@@ -243,6 +243,7 @@ pub struct PduInstance {
 #[derive(Debug)]
 pub struct SignalInstance {
     pub signal_ref: String,
+    pub is_high_low_byte_order: Option<bool>,
     // indirectly by Vec order. pub sequence_number: u32,
     pub bit_position: Option<u32>,
 }
@@ -1432,7 +1433,10 @@ impl FibexData {
                             .child_by_name("BIT-POSITION")
                             .and_then(|e| e.text.as_ref())
                             .and_then(|e| e.parse::<u32>().ok());
-
+                        let is_high_low_byte_order = pdu_i
+                            .child_by_name("IS-HIGH-LOW-BYTE-ORDER")
+                            .and_then(|e| e.text.as_deref())
+                            .and_then(|t| t.parse::<bool>().ok()); 
                         if signal_instances.len() as u32 != sequence_nr {
                             return Err(FibexError {
                                 msg: format!(
@@ -1445,6 +1449,7 @@ impl FibexData {
                         }
                         signal_instances.push(SignalInstance {
                             signal_ref,
+                            is_high_low_byte_order,
                             bit_position,
                         });
                     }
