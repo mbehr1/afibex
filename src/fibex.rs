@@ -4,9 +4,10 @@
 // [ ] test importing multiple fibex for the same services but with different version (diff major, diff minor only)
 // [ ] test importing multiple fibex for the same/similar channels/frames
 // [ ] support LONG-NAME: parse as array to lang <ho:LONG-NAME xml:lang="en">ABCDE</ho:LONG-NAME>
+// [ ] support for STATIC-PART and MANUFACTURER-EXT.. for fx:MULTIPLEXER
 
+use nohash_hasher::IntMap;
 use quick_xml::{events::Event, Reader};
-
 use std::{
     collections::HashMap,
     error::Error,
@@ -173,7 +174,7 @@ pub struct Channel {
     pub short_name: Option<String>,
     pub desc: Option<String>,
     // frame_triggerings todo, lets store the identifier->frame-ref mapping only for now for u32 based identifiers
-    pub frame_ref_by_frame_triggering_identifier: HashMap<u32, String>,
+    pub frame_ref_by_frame_triggering_identifier: IntMap<u32, String>,
     pub manufacturer_extension: Option<XmlElement>,
 }
 
@@ -263,7 +264,77 @@ pub struct Pdu {
     pub byte_length: u32,
     pub pdu_type: String, // todo better PDUTYPE?
     pub signal_instances: Vec<SignalInstance>,
+    pub multiplexer: Option<Multiplexer>,
     pub manufacturer_extension: Option<XmlElement>,
+}
+
+/// fx:MULTIPLEXER-TYPE according to https://www.asam.net/xml/fbx/fibex.xsd
+/// <xs:sequence>
+///   <xs:element name="SWITCH" type="fx:SWITCH"/>
+///   <xs:element name="DYNAMIC-PART" type="fx:DYNAMIC-PART"/>
+///   <xs:element name="STATIC-PART" type="fx:STATIC-PART" minOccurs="0"/>
+///   <xs:element name="TRIGGER-MODE" type="fx:TRIGGER-MODE" minOccurs="0">
+/// </xs:sequence>
+/// <xs:attribute name="EXTENDED-ADDRESSING" type="xs:boolean" use="optional" fixed="true">
+///
+/// dynamic part as
+/// <xs:extension base="fx:MUX-PART-TYPE">
+/// <xs:sequence>
+///   <xs:element name="SWITCHED-PDU-INSTANCES" type="fx:SWITCHED-PDU-INSTANCES"/>
+/// </xs:sequence>
+///
+/// static part as
+/// <xs:extension base="fx:MUX-PART-TYPE">
+/// <xs:sequence>
+///   <xs:element name="STATIC-PDU-INSTANCE" type="fx:GENERIC-PDU-INSTANCE-TYPE">
+/// </xs:sequence>
+///
+/// mux-part-type as
+/// <xs:extension base="fx:NAMED-ELEMENT-TYPE">
+/// <xs:sequence>
+///   <xs:element name="SEGMENT-POSITIONS" type="fx:SEGMENT-POSITIONS"/>
+///   <xs:element name="MANUFACTURER-EXTENSION" type="fx:MANUFACTURER-MUX-PART-EXTENSION" minOccurs="0">
+/// </xs:sequence>
+///
+/// switch-type as
+///
+/// <xs:complexType name="SWITCH">
+/// <xs:documentation>Reserved space in a PDU, used to encode what variation of signals is currently transported at the position given by the corresponding dynamic part</xs:documentation>
+/// <xs:extension base="fx:NAMED-ELEMENT-TYPE">
+/// <xs:sequence>
+///   <xs:group ref="fx:COMMON-LAYOUT-DETAILS"/>
+///   <xs:element ref="ho:BIT-LENGTH"/>
+///   <xs:element name="MANUFACTURER-EXTENSION" type="fx:MANUFACTURER-SWITCH-EXTENSION" minOccurs="0">
+/// </xs:sequence>
+
+#[derive(Debug)]
+pub struct Multiplexer {
+    pub switch: Switch,
+    pub dynamic_part: DynamicPart,
+    // todo add support for STATIC-PART -> examples welcome
+}
+
+#[derive(Debug)]
+pub struct Switch {
+    // id? needed?
+    pub short_name: Option<String>,
+    pub bit_position: u32,
+    pub is_high_low_byte_order: bool,
+    pub bit_length: u32, // we do support only up to 64bit (see u64 key type of HashMap used)
+}
+
+#[derive(Debug)]
+pub struct DynamicPart {
+    // pub short_name: Option<String>, // needed???
+    pub segment_position: SegmentPosition, // todo by def a vec, but we do parse/assume/need exactly one
+    pub pdu_instances_switch_map: IntMap<u64, PduInstance>,
+}
+
+#[derive(Debug)]
+pub struct SegmentPosition {
+    pub bit_position: u32,
+    pub is_high_low_byte_order: bool,
+    pub bit_length: u32,
 }
 
 /// all elements are derived from fibex: REVISED-ELEMENT-TYPE containing:
@@ -986,7 +1057,7 @@ impl FibexData {
         let mut buf = Vec::with_capacity(1024 * 1024); // todo better default they are large
         let mut short_name: Option<String> = None;
         let mut desc: Option<String> = None;
-        let mut frame_ref_by_frame_triggering_identifier = HashMap::new();
+        let mut frame_ref_by_frame_triggering_identifier = IntMap::default();
         let mut manufacturer_extension: Option<XmlElement> = None;
 
         let id = e_si
@@ -1381,6 +1452,7 @@ impl FibexData {
         let mut byte_length: Option<u32> = None;
         let mut pdu_type: Option<String> = None;
         let mut signal_instances = vec![];
+        let mut multiplexer: Option<Multiplexer> = None;
 
         let id = e_si
             .attributes()
@@ -1453,6 +1525,7 @@ impl FibexData {
                             bit_position,
                         });
                     }
+                    b"MULTIPLEXER" => multiplexer = self.parse_multiplexer(e, reader)?,
                     b"LONG-NAME" => skip_element(e, reader)?, // todo
                     b"ELEMENT-REVISIONS" => skip_element(e, reader)?, // todo
                     _ => {
@@ -1491,10 +1564,170 @@ impl FibexData {
             byte_length,
             pdu_type,
             signal_instances,
+            multiplexer,
             manufacturer_extension,
         };
         self.elements.pdus_map_by_id.insert(id, pdu);
         Ok(())
+    }
+
+    fn parse_multiplexer<T: BufRead>(
+        &self,
+        e_mpx: &quick_xml::events::BytesStart,
+        reader: &mut Reader<T>,
+    ) -> Result<Option<Multiplexer>, Box<dyn Error>> {
+        let mut buf = Vec::with_capacity(16 * 1024); // todo better default
+
+        let mut switch: Option<Switch> = None;
+        let mut dynamic_part: Option<DynamicPart> = None;
+
+        loop {
+            match reader.read_event(&mut buf)? {
+                Event::Start(ref e) => match e.local_name() {
+                    b"SWITCH" => {
+                        let xml_e = read_element(e, reader, false)?;
+                        let short_name = xml_e
+                            .child_by_name("SHORT-NAME")
+                            .and_then(|c| c.text.to_owned());
+                        let bit_position = xml_e
+                            .child_by_name("BIT-POSITION")
+                            .and_then(|e| e.text.as_ref())
+                            .and_then(|e| e.parse::<u32>().ok());
+                        let bit_length = xml_e
+                            .child_by_name("BIT-LENGTH")
+                            .and_then(|e| e.text.as_ref())
+                            .and_then(|e| e.parse::<u32>().ok());
+                        let is_high_low_byte_order = xml_e
+                            .child_by_name("IS-HIGH-LOW-BYTE-ORDER")
+                            .and_then(|e| e.text.as_deref())
+                            .and_then(|t| t.parse::<bool>().ok());
+                        if let Some(bit_position) = bit_position {
+                            if let Some(is_high_low_byte_order) = is_high_low_byte_order {
+                                if let Some(bit_length) = bit_length {
+                                    switch = Some(Switch {
+                                        short_name,
+                                        bit_position,
+                                        is_high_low_byte_order,
+                                        bit_length,
+                                    });
+                                }
+                            }
+                        }
+                        if switch.is_none() {
+                            println!(
+                                "parse_multiplexer: couldn't parse SWITCH for '{}'",
+                                String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                            );
+                        }
+                    }
+                    b"DYNAMIC-PART" => {
+                        let xml_e = read_element(e, reader, false)?;
+                        let segment_position = xml_e
+                            .child_by_name("SEGMENT-POSITIONS")
+                            .and_then(|e| e.child_by_name("SEGMENT-POSITION"))
+                            .and_then(|e| {
+                                let bit_position = e
+                                    .child_by_name("BIT-POSITION")
+                                    .and_then(|e| e.text.as_ref())
+                                    .and_then(|e| e.parse::<u32>().ok());
+                                let is_high_low_byte_order = e
+                                    .child_by_name("IS-HIGH-LOW-BYTE-ORDER")
+                                    .and_then(|e| e.text.as_deref())
+                                    .and_then(|t| t.parse::<bool>().ok());
+                                let bit_length = e
+                                    .child_by_name("BIT-LENGTH")
+                                    .and_then(|e| e.text.as_ref())
+                                    .and_then(|e| e.parse::<u32>().ok());
+                                if let Some(bit_position) = bit_position {
+                                    if let Some(is_high_low_byte_order) = is_high_low_byte_order {
+                                        if let Some(bit_length) = bit_length {
+                                            return Some(SegmentPosition {
+                                                bit_position,
+                                                is_high_low_byte_order,
+                                                bit_length,
+                                            });
+                                        }
+                                    }
+                                }
+                                None
+                            });
+                        let mut pdu_instances_switch_map = IntMap::default();
+                        xml_e.child_by_name("SWITCHED-PDU-INSTANCES").map(|e| {
+                            for pdu_i in &e.children {
+                                let pdu_ref = pdu_i
+                                    .child_by_name("PDU-REF")
+                                    .and_then(|e| e.attr("ID-REF"))
+                                    .map(|a| a.1.to_owned());
+                                let bit_position = pdu_i
+                                    .child_by_name("BIT-POSITION")
+                                    .and_then(|e| e.text.as_ref())
+                                    .and_then(|e| e.parse::<u32>().ok());
+                                let is_high_low_byte_order = pdu_i
+                                    .child_by_name("IS-HIGH-LOW-BYTE-ORDER")
+                                    .and_then(|e| e.text.as_deref())
+                                    .and_then(|t| t.parse::<bool>().ok()); // todo handle errors? (instead of ok!)
+                                let switch_code = pdu_i
+                                    .child_by_name("SWITCH-CODE")
+                                    .and_then(|e| e.text.as_ref())
+                                    .and_then(|e| e.parse::<u64>().ok());
+                                if let Some(switch_code) = switch_code {
+                                    if let Some(pdu_ref) = pdu_ref {
+                                        pdu_instances_switch_map.insert(
+                                            switch_code,
+                                            PduInstance {
+                                                pdu_ref,
+                                                bit_position,
+                                                is_high_low_byte_order,
+                                            },
+                                        );
+                                    }
+                                }
+                            }
+                            Some(())
+                        });
+                        if let Some(segment_position) = segment_position {
+                            dynamic_part = Some(DynamicPart {
+                                segment_position,
+                                pdu_instances_switch_map,
+                            });
+                        }
+
+                        if dynamic_part.is_none() {
+                            println!(
+                                "parse_multiplexer: couldn't parse DYNAMIC-PART for '{}'",
+                                String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                            );
+                        }
+                    }
+                    _ => {
+                        println!(
+                            "parse_multiplexer: Event::Start of unknown '{}'",
+                            String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                        );
+                        skip_element(e, reader)?
+                    }
+                },
+                Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
+                Event::Empty(ref e) => println!(
+                    "parse_multiplexer: Event::Empty of unknown '{}'",
+                    String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
+                ),
+                Event::End(ref e) if e.local_name() == e_mpx.local_name() => break,
+                _ => {} // text, comment
+            }
+        }
+        // verify that all mandatory parts are there?
+        if let Some(switch) = switch {
+            if let Some(dynamic_part) = dynamic_part {
+                return Ok(Some(Multiplexer {
+                    switch,
+                    dynamic_part,
+                }));
+            }
+        } else {
+            return Err(FibexError::new("SWITCH missing in MULTIPLEXER").into());
+        }
+        Ok(None)
     }
 
     fn parse_method<T: BufRead>(
