@@ -15,6 +15,7 @@ categories = ["development-tools", "encoding", "parsing"]
 
 [dependencies]
 quick-xml = "0.23"
+nohash-hasher = "0.2.0"
 
 [package.metadata.workspaces]
 independent = true
