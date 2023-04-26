@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.9.0 - 2023-04-26
+#### Features
+- multiplexer support - (6209829) - Matthias Behr
+
+- - -
 ## v0.8.0 - 2023-04-18
 #### Features
 - add is_high_low_byte_order to SignalInstance - (8d5265a) - Matthias Behr
