@@ -17,6 +17,8 @@ use std::{
     sync::Arc,
 };
 
+use super::franca_json::parse_franca_json;
+
 // todo: think about impl fmt::Display for FibexContext struct
 // problems: fmt:Error has no means to carry data/info. just that an error occured.
 
@@ -790,6 +792,11 @@ impl FibexData {
         }
     }
     pub fn load_fibex_file(&mut self, file: &Path) -> Result<(), Box<dyn Error>> {
+        if let Some(ext) = file.extension() {
+            if ext.eq_ignore_ascii_case("json") {
+                return parse_franca_json(file, self);
+            }
+        }
         let mut reader = Reader::from_file(file)?;
         let mut buf = Vec::new();
         loop {
@@ -1172,9 +1179,9 @@ impl FibexData {
                     }}).or_insert(new_chan.1);
             }
         } else {
-        self.elements
-            .channels
-            .insert(channel.id.to_owned(), channel);
+            self.elements
+                .channels
+                .insert(channel.id.to_owned(), channel);
         }
         Ok(())
     }
@@ -1508,7 +1515,7 @@ impl FibexData {
                         let is_high_low_byte_order = pdu_i
                             .child_by_name("IS-HIGH-LOW-BYTE-ORDER")
                             .and_then(|e| e.text.as_deref())
-                            .and_then(|t| t.parse::<bool>().ok()); 
+                            .and_then(|t| t.parse::<bool>().ok());
                         if signal_instances.len() as u32 != sequence_nr {
                             return Err(FibexError {
                                 msg: format!(
@@ -2372,9 +2379,9 @@ impl CompuScale {
     }
 
     /// if the CompuScale represents a single value return that one else return None
-    /// 
+    ///
     /// A CompuScale represents a single value if:
-    ///   - lower_limit == upper_limit 
+    ///   - lower_limit == upper_limit
     ///   - lower_limit type of INCLUDED
     pub fn get_single_value(&self) -> Option<&XsDouble> {
         if let Some(lower_limit) = &self.lower_limit {
@@ -2574,4 +2581,31 @@ mod tests {
 
         println!("fb={:?}", fb);
     }
+
+    #[test]
+    fn load_fibex_json() {
+        let mut fb = FibexData::new();
+        let path = Path::new("tests/fibex1.json");
+        assert!(path.exists());
+        let r = fb.load_fibex_file(path);
+        assert!(r.is_ok(), "{:?}", r.err());
+        assert_eq!(fb.elements.services_map_by_sid_major.len(), 3);
+        assert_eq!(fb.elements.datatypes_map_by_id.len(), 19);
+
+        let ets = fb.elements.services_map_by_sid_major.get(&(257, 2));
+        assert!(ets.is_some());
+        let ets = ets.unwrap();
+        assert_eq!(ets.len(), 1);
+        let ets = &ets[0];
+        assert!(ets.methods_by_mid.contains_key(&40)); // attributes / fields getter
+        assert!(ets.methods_by_mid.contains_key(&41)); // attributes / fields setter
+        assert!(ets.methods_by_mid.contains_key(&25)); // methods echoUNION
+        assert!(ets.methods_by_mid.contains_key(&49)); // methods clientServiceCallEchoUINT8Array
+        assert!(ets.methods_by_mid.contains_key(&32775)); // attributes / fields notifier
+        assert!(ets.methods_by_mid.contains_key(&32779)); // broadcasts / events TestEventUINT8Multicast
+        assert!(ets.methods_by_mid.contains_key(&32770)); // broadcasts / events TestEventUINT8Array
+
+        assert!(fb.validate_datatypes().is_ok());
+    }
+
 }

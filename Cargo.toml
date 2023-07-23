@@ -16,6 +16,7 @@ categories = ["development-tools", "encoding", "parsing"]
 [dependencies]
 quick-xml = "0.23"
 nohash-hasher = "0.2.0"
+serde_json = "1.0" # todo add simd-json for native platforms
 
 [package.metadata.workspaces]
 independent = true
