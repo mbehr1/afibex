@@ -1,0 +1,757 @@
+{
+    "datatypes": {
+        "Test.INFRASTRUCTURE.TESTABILITY.__Anonymous__.Union1@0.0": {
+            "type": "Union",
+            "package": "Test.INFRASTRUCTURE.TESTABILITY",
+            "name": "Union1",
+            "tags": {
+                "external_id": "oid=_398EC56BE651497E84D93BF3A8E2C734"
+            },
+            "items": [
+                {
+                    "name": "uInt8Member",
+                    "tags": {
+                        "external_id": "oid=_ABD508273E9242BF8B55FE6315635773"
+                    },
+                    "datatype": "UInt8"
+                },
+                {
+                    "name": "uInt16Member",
+                    "tags": {
+                        "external_id": "oid=_B95B476124864406A4CF7A341C549055"
+                    },
+                    "datatype": "UInt16"
+                },
+                {
+                    "name": "uInt32MemberArray",
+                    "tags": {
+                        "description": "1081674596",
+                        "external_id": "oid=_E2F1C455E9B7432A9BB196F0F82B3AA7"
+                    },
+                    "datatype": "UInt32",
+                    "array_size": [
+                        8,
+                        8
+                    ],
+                    "deployment": {
+                        "network.someip": {
+                            "Test.INFRASTRUCTURE.TESTABILITY.Union1.uInt32MemberArray": {
+                                "SomeIpArrayLengthWidth": 0,
+                                "SomeIpArrayMaxLength": 8,
+                                "SomeIpArrayMinLength": 8
+                            }
+                        }
+                    }
+                }
+            ],
+            "deployment": {
+                "network.someip": {
+                    "Test.INFRASTRUCTURE.TESTABILITY.Union1": {}
+                }
+            },
+            "version": {
+                "major": 0,
+                "minor": 0
+            }
+        },
+        "Test.INFRASTRUCTURE.__Anonymous__.KeyIdx3@0.0": {
+            "type": "TypeDef",
+            "package": "Test.INFRASTRUCTURE",
+            "name": "KeyIdx3",
+            "tags": {
+                "description": "Selects the test key index",
+                "external_id": "oid=_E30A4D7C5A3F3D20E05368612EA0507E"
+            },
+            "datatype": "UInt8",
+            "version": {
+                "major": 0,
+                "minor": 0
+            }
+        },
+        "Test.INFRASTRUCTURE.__Anonymous__.UUID@0.0": {
+            "type": "Array",
+            "package": "Test.INFRASTRUCTURE",
+            "name": "UUID",
+            "datatype": "Test.INFRASTRUCTURE.__Anonymous__.KeyIdx3@0.0",
+            "array_size": [
+                0,
+                80
+            ],
+            "tags": {
+                "description": "Unique User Identifier (0Byte - 80 Byte).",
+                "external_id": "oid=_E30A4D7C5A0D3D20E05368612EA0507E"
+            },
+            "deployment": {
+                "network.someip": {
+                    "Test.INFRASTRUCTURE.UUID": {
+                        "SomeIpArrayLengthWidth": 4,
+                        "SomeIpArrayMaxLength": 80,
+                        "SomeIpArrayMinLength": 0
+                    }
+                }
+            },
+            "version": {
+                "major": 0,
+                "minor": 0
+            }
+        },
+        "Test.INFRASTRUCTURE.__Anonymous__.StatusExtDiag@0.0": {
+            "type": "Struct",
+            "package": "Test.INFRASTRUCTURE",
+            "name": "StatusExtDiag",
+            "tags": {
+                "external_id": "oid=_7ECD2BBF2D08446494EED646F94C1B93"
+            },
+            "items": [
+                {
+                    "name": "statusConnectionHSFZ",
+                    "tags": {
+                        "external_id": "oid=_765BAADB1BE542209CA607933B679467"
+                    },
+                    "datatype": "Test.INFRASTRUCTURE.__Anonymous__.StatusConnectionHSFZ@0.0"
+                },
+                {
+                    "name": "statusActivationWireHSFZ",
+                    "tags": {
+                        "external_id": "oid=_DD46A7D15A6244AC81A3CAB3ECFAAD70"
+                    },
+                    "datatype": "Test.INFRASTRUCTURE.__Anonymous__.StatusActivationWireHSFZ@0.0"
+                }
+            ],
+            "deployment": {
+                "network.someip": {
+                    "Test.INFRASTRUCTURE.StatusExtDiag": {
+                        "SomeIpStructLengthWidth": 0,
+                        "StructBitField": false
+                    }
+                }
+            },
+            "version": {
+                "major": 0,
+                "minor": 0
+            }
+        },
+        "Test.INFRASTRUCTURE.__Anonymous__.StatusConnectionHSFZ@0.0": {
+            "type": "Enumeration",
+            "package": "Test.INFRASTRUCTURE",
+            "name": "StatusConnectionHSFZ",
+            "tags": {
+                "external_id": "oid=_0A70D0E12D444F96806E677974C77CAD"
+            },
+            "items": [
+                {
+                    "name": "Connection_Not_Established",
+                    "tags": {
+                        "description": "Connection Not Established"
+                    },
+                    "value": 0
+                },
+                {
+                    "name": "Connection_Established",
+                    "tags": {
+                        "description": "Connection Established"
+                    },
+                    "value": 1
+                },
+                {
+                    "name": "Signal_Unfilled",
+                    "tags": {
+                        "description": "Signal Unfilled"
+                    },
+                    "value": 255
+                }
+            ],
+            "deployment": {
+                "network.someip": {
+                    "Test.INFRASTRUCTURE.StatusConnectionHSFZ": {
+                        "EnumBackingType": "UInt8",
+                        "SomeIpEnumWidth": 1
+                    }
+                }
+            },
+            "version": {
+                "major": 0,
+                "minor": 0
+            }
+        },
+        "Test.INFRASTRUCTURE.__Anonymous__.StatusActivationWireHSFZ@0.0": {
+            "type": "Enumeration",
+            "package": "Test.INFRASTRUCTURE",
+            "name": "StatusActivationWireHSFZ",
+            "tags": {
+                "external_id": "oid=_BB480D2109694BAD942AA3B2299B1F39"
+            },
+            "items": [
+                {
+                    "name": "Activation_Wire_Low",
+                    "tags": {
+                        "description": "Activation Wire Low"
+                    },
+                    "value": 0
+                },
+                {
+                    "name": "Activation_Wire_High",
+                    "tags": {
+                        "description": "Activation Wire High"
+                    },
+                    "value": 1
+                },
+                {
+                    "name": "Activation_Wire_Change_High_Low",
+                    "tags": {
+                        "description": "Activation Wire Change High Low"
+                    },
+                    "value": 2
+                },
+                {
+                    "name": "Activation_Wire_Change_Low_High",
+                    "tags": {
+                        "description": "Activation Wire Change Low High"
+                    },
+                    "value": 3
+                },
+                {
+                    "name": "Signal_Unfilled",
+                    "tags": {
+                        "description": "Signal Unfilled"
+                    },
+                    "value": 255
+                }
+            ],
+            "deployment": {
+                "network.someip": {
+                    "Test.INFRASTRUCTURE.StatusActivationWireHSFZ": {
+                        "EnumBackingType": "UInt8",
+                        "SomeIpEnumWidth": 1
+                    }
+                }
+            },
+            "version": {
+                "major": 0,
+                "minor": 0
+            }
+        },
+        "Test.CHASSIS.__Anonymous__.OdometryVehicle2Wrapper@0.0": {
+            "type": "Struct",
+            "package": "Test.CHASSIS",
+            "name": "OdometryVehicle2Wrapper",
+            "tags": {
+                "external_id": "oid=_819F2D3D20DC4DA39672908F601EB01E"
+            },
+            "items": [
+                {
+                    "name": "xPositionOdometryVehicleErrorAmplitude",
+                    "tags": {
+                        "description": "SIGNAL SHORTNAME = XPO_ODO_VEH_ERR_AMP\n                          SIGNAL LONG-NAME[de] = x-Position_Odometrie_Fahrzeug_Fehler_Amplitude\n                          SIGNAL LONG-NAME[en] = x-position_odometry_vehicle_error_amplitude\n                          [de] = LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;\n                          Fehler-Amplitude zum Signal x-Position_Odometrie_Fahrzeug\n                          CODING SHORTNAME = PO_ODO_VEH_ERR_AMP\n                          CODING LONG-NAME[de] = Position_Odometrie_Fahrzeug_Fehler_Amplitude\n                          CODING LONG-NAME[en] = position_odometry_vehicle_error_amplitude\n                          BIT-LENGTH = 12\n                          COMPU-METHOD CATEGORY = LINEAR\n                          UNIT-REF = meter\n                          SCALE-CONSTR = [0x0, 0x10]\n                          SCALE-CONSTR NOT-VALID = 0xFFF\n                          COMPU-INTERNAL-TO-PHYS = ( 0.0 + 0.004 ) / 1.0\n                          COMPU-METHOD CATEGORY = TEXTTABLE\n                          VALUE 0xFFD (Funktionsschnittstelle_ist_nicht_verfuegbar) Sendefunktion in Betrieb, Werte nicht verfügbar\n                          VALUE 0xFFE (Funktion_meldet_Fehler) Sendefunktion in Betrieb, meldet Fehler\n                          VALUE 0xFFF (Signal_unbefuellt) Sendefunktion nicht in Betrieb",
+                        "external_id": "oid=_BE50EB2ACA444D9BAC0A2C6D0A67D753"
+                    },
+                    "datatype": "UInt16",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.CHASSIS.OdometryVehicle2Wrapper.xPositionOdometryVehicleErrorAmplitude": {
+                                "SomeIpIntegerBitWidth": 12,
+                                "SomeIpIntegerInvalidValue": 4095
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "yPositionOdometryVehicleErrorAmplitude",
+                    "tags": {
+                        "description": "SIGNAL SHORTNAME = YPO_ODO_VEH_ERR_AMP\n                          SIGNAL LONG-NAME[de] = y-Position_Odometrie_Fahrzeug_Fehler_Amplitude\n                          SIGNAL LONG-NAME[en] = y-position_odometry_vehicle_error_amplitude\n                          [de] = LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;\n                          Fehler-Amplitude zum Signal y-Position_Odometrie_Fahrzeug\n                          CODING SHORTNAME = PO_ODO_VEH_ERR_AMP\n                          CODING LONG-NAME[de] = Position_Odometrie_Fahrzeug_Fehler_Amplitude\n                          CODING LONG-NAME[en] = position_odometry_vehicle_error_amplitude\n                          BIT-LENGTH = 12\n                          COMPU-METHOD CATEGORY = LINEAR\n                          UNIT-REF = meter\n                          SCALE-CONSTR = [0x0, 0x10]\n                          SCALE-CONSTR NOT-VALID = 0xFFF\n                          COMPU-INTERNAL-TO-PHYS = ( 0.0 + 0.004 ) / 1.0\n                          COMPU-METHOD CATEGORY = TEXTTABLE\n                          VALUE 0xFFD (Funktionsschnittstelle_ist_nicht_verfuegbar) Sendefunktion in Betrieb, Werte nicht verfügbar\n                          VALUE 0xFFE (Funktion_meldet_Fehler) Sendefunktion in Betrieb, meldet Fehler\n                          VALUE 0xFFF (Signal_unbefuellt) Sendefunktion nicht in Betrieb",
+                        "external_id": "oid=_9B2B6B5BB9FC47F78DD269C82006E5D2"
+                    },
+                    "datatype": "UInt16",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.CHASSIS.OdometryVehicle2Wrapper.yPositionOdometryVehicleErrorAmplitude": {
+                                "SomeIpIntegerBitWidth": 12,
+                                "SomeIpIntegerInvalidValue": 4095
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "yawAngleOdometryVehicleErrorAmplitude",
+                    "tags": {
+                        "description": "SIGNAL SHORTNAME = ANGYAW_ODO_VEH_ERR_AMP\n                          SIGNAL LONG-NAME[de] = Gierwinkel_Odometrie_Fahrzeug_Fehler_Amplitude\n                          SIGNAL LONG-NAME[en] = yaw-angle_odometry_vehicle_error_amplitude\n                          [de] = LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;\n                          Fehler-Amplitude zum Signal Gierwinkel_Odometrie_Fahrzeug\n                          CODING SHORTNAME = ANGYAW_ODO_VEH_ERR_AMP\n                          CODING LONG-NAME[de] = Gierwinkel_Odometrie_Fahrzeug_Fehler_Amplitude\n                          CODING LONG-NAME[en] = yaw-angle_odometry_vehicle_error_amplitude\n                          BIT-LENGTH = 12\n                          COMPU-METHOD CATEGORY = LINEAR\n                          UNIT-REF = degree\n                          SCALE-CONSTR = [0x0, 0x167]\n                          SCALE-CONSTR NOT-VALID = 0xFFF\n                          COMPU-INTERNAL-TO-PHYS = ( 0.0 + 0.08797 ) / 1.0\n                          COMPU-METHOD CATEGORY = TEXTTABLE\n                          VALUE 0xFFD (Funktionsschnittstelle_ist_nicht_verfuegbar) Sendefunktion in Betrieb, Werte nicht verfügbar\n                          VALUE 0xFFE (Funktion_meldet_Fehler) Sendefunktion in Betrieb, meldet Fehler\n                          VALUE 0xFFF (Signal_unbefuellt) Sendefunktion nicht in Betrieb",
+                        "external_id": "oid=_D863F5C1B4394534877366A643C925A3"
+                    },
+                    "datatype": "UInt16",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.CHASSIS.OdometryVehicle2Wrapper.yawAngleOdometryVehicleErrorAmplitude": {
+                                "SomeIpIntegerBitWidth": 12,
+                                "SomeIpIntegerInvalidValue": 4095
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "statusRadiusWheelOdometry",
+                    "tags": {
+                        "description": "SIGNAL SHORTNAME = ST_RAD_WHL_ODO\n                          SIGNAL LONG-NAME[de] = Status_Radius_Rad_Odometrie\n                          SIGNAL LONG-NAME[en] = status_radius_wheel_odometry\n                          [de] = LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;\n                          In diesem Signal wird der Lernstatus des statischen Radradius (R0) und der Aufweitungskoeffizient des dynamischen Radradius (R2) kommuniziert.==========LogicalInterface:Test.\n                          CHASSIS.ODOMETRY.Odometry[external](at)Fahren;This signal communicates the learning status of the static wheel radius (R0) and the widening coefficient\n                          of the dynamic wheel radius (R2).\n                          CODING SHORTNAME = ST_RAD_WHL_ODO\n                          CODING LONG-NAME[de] = Status_Radius_Rad_Odometrie\n                          CODING LONG-NAME[en] = status_radius_wheel_odometry\n                          BIT-LENGTH = 6\n                          COMPU-METHOD CATEGORY = BITFIELD-TEXTTABLE\n                          MASK 0b 1000 11 [R0_korrigiert_und_bestaetigt] Applizierter statischer Radradius R0 wurde mit einem Korrekturfaktor hoher Genauigkeit angepasst und der Korrekturfaktor wurde in diesem Klemmenzyklus geschätzt. VALUE 0x0\n                          MASK 0b 1011 00 [R2_korrigiert_und_bestaetigt] Applizierter dynamischer Radradius R2 wurde mit einem Korrekturfaktor hoher Genauigkeit angepasst und der Korrekturfaktor wurde in diesem Klemmenzyklus geschätzt. VALUE 0x0\n                          MASK 0b 1100 00 [R0_nicht_mit_mittlerer_Genauigkeit_korrigiert] Codierung wird ab SP2018 bedient\n                          Falls keine Korrektur von R0 mit hoher Genauigkeit erfolgt, wird der applizierte statische Radradius R0 verwendet. VALUE 0x0\n                          MASK 0b 1000 11 [R0_korrigiert_und_neu_gelernt] Applizierter statischer Radradius R0 wird mit einem Korrekturfaktor hoher Genauigkeit angepasst und der Korrekturfaktor wird aktualisiert. VALUE 0x1\n                          MASK 0b 1000 11 [R0_korrigiert_und_nicht_bestaetigt] Applizierter statischer Radradius R0 wurde mit einem Korrekturfaktor hoher Genauigkeit angepasst und der Korrekturfaktor wurde nicht in diesem Klemmenzyklus geschätzt. VALUE 0x2\n                          MASK 0b 1000 11 [R0_nicht_korrigiert] Falls keine Korrektur von R0 mit mittlerer Genauigkeit erfolgt, wird der applizierte statische Radradius R0 verwendet. VALUE 0x3\n                          MASK 0b 1011 00 [R2_korrigiert_und_neu_gelernt] Applizierter dynamischer Radradius R2 wird mit einem Korrekturfaktor hoher Genauigkeit angepasst und der Korrekturfaktor wird aktualisiert. VALUE 0x4\n                          MASK 0b 1011 00 [R2_korrigiert_und_nicht_bestaetigt] Applizierter dynamischer Radradius R2 wurde mit einem Korrekturfaktor hoher Genauigkeit angepasst und der Korrekturfaktor wurde nicht in diesem Klemmenzyklus geschätzt. VALUE 0x8\n                          MASK 0b 1011 00 [R2_nicht_ korrigiert] Applizierter dynamischer Radradius R2 wird verwendet und es erfolgt keine Korrektur. VALUE 0xC\n                          MASK 0b 1100 00 [R0_mit_mittlerer_Genauigkeit_korrigiert] Codierung wird ab SP2018 bedient\n                          Applizierter statischer Radradius R0 wurde mit einem Korrekturfaktor mittlerer Genauigkeit angepasst. VALUE 0x10\n                          MASK 0b 1111 11 [Funktionsschnittstelle_ist_nicht_verfuegbar] Sollwert nicht verfügbar: Funktion arbeitet fehlerfrei VALUE 0x3D\n                          MASK 0b 1111 11 [Funktion_meldet_Fehler] Sollwert nicht verfügbar: Funktion meldet Fehler VALUE 0x3E\n                          MASK 0b 1111 11 [Signal_unbefuellt] Sendefunktion nicht in Betrieb VALUE 0x3F\n                          COMPU-METHOD CATEGORY = IDENTICAL\n                          SCALE-CONSTR NOT-VALID = 0x3F",
+                        "external_id": "oid=_79D990D2955E40F9BACE386B379A2C52"
+                    },
+                    "datatype": "UInt8",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.CHASSIS.OdometryVehicle2Wrapper.statusRadiusWheelOdometry": {
+                                "SomeIpIntegerBitWidth": 6,
+                                "SomeIpIntegerInvalidValue": 63
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "counterSyncOdometryVehicle2",
+                    "tags": {
+                        "description": "SIGNAL SHORTNAME = COU_SYNC_ODO_VEH_2\n                          SIGNAL LONG-NAME[de] = Zähler_Sync_Odometrie_Fahrzeug_2\n                          SIGNAL LONG-NAME[en] = counter_sync_odometry_vehicle_2\n                          [de] = LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;\n                          Der Zähler ist mit dem Master im zentralen Gateway synchronisiert.\n                          CODING SHORTNAME = COU_SYNC_10_BIT\n                          CODING LONG-NAME[de] = Zähler_Sync_10_Bit\n                          CODING LONG-NAME[en] = counter_sync_10_bit\n                          BIT-LENGTH = 10\n                          COMPU-METHOD CATEGORY = LINEAR\n                          UNIT-REF = stbm_ticks\n                          SCALE-CONSTR = [0x0, 0xEE400000]\n                          SCALE-CONSTR NOT-VALID = 0x3FF\n                          COMPU-INTERNAL-TO-PHYS = ( 0.0 + 4194304.0 ) / 1.0\n                          COMPU-METHOD CATEGORY = TEXTTABLE\n                          VALUE 0x3FD (Funktionsschnittstelle_ist_nicht_verfuegbar) Sendefunktion in Betrieb, Werte nicht verfügbar\n                          VALUE 0x3FE (Funktion_meldet_Fehler) Sendefunktion in Betrieb, meldet Fehler\n                          VALUE 0x3FF (Signal_unbefuellt) Sendefunktion nicht in Betrieb",
+                        "external_id": "oid=_5DE1EB2AEC9E4E158CB32DA14077A207"
+                    },
+                    "datatype": "UInt16",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.CHASSIS.OdometryVehicle2Wrapper.counterSyncOdometryVehicle2": {
+                                "SomeIpIntegerBitWidth": 10,
+                                "SomeIpIntegerInvalidValue": 1023
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "aliveOdometryVehicle2",
+                    "tags": {
+                        "description": "SIGNAL SHORTNAME = ALIV_ODO_VEH_2\n                          SIGNAL LONG-NAME[de] = Alive_Odometrie_Fahrzeug_2\n                          SIGNAL LONG-NAME[en] = alive_odometry_vehicle_2\n                          [de] = LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;\n                          Standardabsicherung Alivezähler laut Definition per Lastenheft Allgemeine Bordnetzkommunikation.==========LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;Standard\n                          Alive counter validation as per definition in the requirements specification \"Allgemeine Bordnetzkommunikation\".\n                          CODING SHORTNAME = ALIV_4_BIT_Unsigned_Integer\n                          CODING LONG-NAME[de] = Alive_4_Bit_Unsigned_Integer\n                          CODING LONG-NAME[en] = alive_4_bit_Unsigned_Integer\n                          BIT-LENGTH = 4\n                          COMPU-METHOD CATEGORY = LINEAR\n                          SCALE-CONSTR = [0x0, 0xE]\n                          SCALE-CONSTR NOT-VALID = 0xF\n                          COMPU-INTERNAL-TO-PHYS = ( 0.0 + 1.0 ) / 1.0",
+                        "external_id": "oid=_EB4F88BF51ED4A76A176FBA3BE534CF9"
+                    },
+                    "datatype": "UInt8",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.CHASSIS.OdometryVehicle2Wrapper.aliveOdometryVehicle2": {
+                                "SomeIpIntegerBitWidth": 4,
+                                "SomeIpIntegerInvalidValue": 15
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "cRCOdometryVehicle2",
+                    "tags": {
+                        "description": "SIGNAL SHORTNAME = CRC_ODO_VEH_2\n                          SIGNAL LONG-NAME[de] = CRC_Odometrie_Fahrzeug_2\n                          SIGNAL LONG-NAME[en] = CRC_odometry_vehicle_2\n                          [de] = LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;\n                          Standardabsicherung Applikations-CRCDieses Signal verwendet die Applikations-CRC-ID = 197 (dez)Dieses Signal beinhaltet die CRC-Checksumme für die erweiterte\n                          Standardabsicherung mit Applikations-CRC nach Anwendungsprofil 1A E2E-Protection (Autosar SWS 428), mit abweichender Platzierung des CRC in Byte 7 (M10-\n                          Verfahren).==========LogicalInterface:Test.CHASSIS.ODOMETRY.Odometry[external](at)Fahren;Standard application CRC validationThis signal uses application\n                          CRC ID = 197 (dec)This signal contains the CRC checksum for the extended standard validation with application CRC according to application profile 1A E2E-\n                          Protection (Autosar SWS 428) with deviating positioning of the CRC in byte 7 (M10 procedure).\n                          CODING SHORTNAME = CRC8\n                          CODING LONG-NAME[de] = CRC8\n                          CODING LONG-NAME[en] = CRC8\n                          [de] = Standartabsicherung Apllikations-CRC.\n                          BIT-LENGTH = 8\n                          COMPU-METHOD CATEGORY = LINEAR\n                          SCALE-CONSTR = [0x0, 0xFF]\n                          COMPU-INTERNAL-TO-PHYS = ( 0.0 + 1.0 ) / 1.0",
+                        "external_id": "oid=_4F69282F5FBE4C3F9374E6F84FC2E9B4"
+                    },
+                    "datatype": "UInt8"
+                }
+            ],
+            "deployment": {
+                "network.someip": {
+                    "Test.CHASSIS.OdometryVehicle2Wrapper": {
+                        "SomeIpStructLengthWidth": 0,
+                        "StructBitField": false
+                    }
+                }
+            },
+            "version": {
+                "major": 0,
+                "minor": 0
+            }
+        }
+    },
+    "interfaces": {
+        "Test.INFRASTRUCTURE.ActivationWireExtDiag@1.0": {
+            "package": "Test.INFRASTRUCTURE",
+            "name": "ActivationWireExtDiag",
+            "tags": {
+                "description": "Thisr represents the \"RPC notification - activation line cond\" ...\nDesc line 2",
+                "external_id": "oid=_55F9788B92724C8E9B78D4C4C4603BDB"
+            },
+            "attributes": {
+                "StatusExtDiag": {
+                    "name": "StatusExtDiag",
+                    "tags": {
+                        "external_id": "oid=_CE229CF45F3842AEA0353F46C77FB082"
+                    },
+                    "readable": true,
+                    "subscribable": true,
+                    "datatype": "Test.INFRASTRUCTURE.__Anonymous__.StatusExtDiag@0.0",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.INFRASTRUCTURE.ActWExtDiag.StatusExtDiag": {
+                                "AttributeGetterTimeout": 0,
+                                "AttributeNotifierTimeout": 0,
+                                "AttributeNotifierUpdateMode": "OnChange",
+                                "SomeIpAttributeEndianess": "be",
+                                "SomeIpAttributeProtocol": "unreliable",
+                                "SomeIpGetterDebounceTime": 500,
+                                "SomeIpGetterID": 1,
+                                "SomeIpGetterMaxRetentionTime": 5,
+                                "SomeIpNotifierDebounceTime": 500,
+                                "SomeIpNotifierID": 32769,
+                                "SomeIpNotifierMaxRetentionTime": 5,
+                                "SomeIpNotifierMulticast": false,
+                                "SomeIpNotifierSenderReceiverInterfaceType": "Unqueued",
+                                "SomeIpStructLengthWidth": 0,
+                                "StructBitField": false,
+                                "eventgroups": [
+                                    "All"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "deployment": {
+                "network.someip": {
+                    "Test.INFRASTRUCTURE.ActivationWireExtDiag_Someip": {
+                        "SomeIpServiceID": 4097,
+                        "use": [
+                            "Test.INFRASTRUCTURE.Types_Someip"
+                        ],
+                        "eventgroups": {
+                            "All": 1
+                        }
+                    }
+                }
+            },
+            "version": {
+                "major": 1,
+                "minor": 0
+            }
+        },
+        "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh2@2.0": {
+            "package": "Test.INFRASTRUCTURE.TESTABILITY",
+            "name": "EnhancedTestabilityServiceHigh2",
+            "tags": {
+                "description": "The service-interfacce for testing service-oriented communication, SOME/IP, and service discovery.",
+                "external_id": "oid=_591120513B4707DEE053221232A02515"
+            },
+            "methods": {
+                "clientServiceCallEchoUINT8Array": {
+                    "name": "clientServiceCallEchoUINT8Array",
+                    "fire_and_forget": false,
+                    "tags": {
+                        "description": "Triggers the Client to call the echo method",
+                        "external_id": "oid=_678932EA17994CB1A937B047D97046F4"
+                    },
+                    "inputs": [
+                        {
+                            "name": "uINT8Array_in",
+                            "datatype": "UInt8",
+                            "array_size": [
+                                0,
+                                5
+                            ],
+                            "deployment": {
+                                "network.someip": {
+                                    "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh.clientServiceCallEchoUINT8Array.uINT8Array_in": {
+                                        "SomeIpArrayLengthWidth": 4,
+                                        "SomeIpArrayMaxLength": 5,
+                                        "SomeIpArrayMinLength": 0
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "uINT8Array_out",
+                            "datatype": "UInt8",
+                            "array_size": [
+                                0,
+                                5
+                            ],
+                            "deployment": {
+                                "network.someip": {
+                                    "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh.clientServiceCallEchoUINT8Array.uINT8Array_out": {
+                                        "SomeIpArrayLengthWidth": 4,
+                                        "SomeIpArrayMaxLength": 5,
+                                        "SomeIpArrayMinLength": 0
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "deployment": {
+                        "network.someip": {
+                            "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh.clientServiceCallEchoUINT8Array": {
+                                "MethodTimeout": 0,
+                                "SomeIpMethodApplicationCycleMs": 0,
+                                "SomeIpMethodDebounceTimeMs": 100,
+                                "SomeIpMethodEndianess": "be",
+                                "SomeIpMethodErrorCoding": "Header",
+                                "SomeIpMethodID": 49,
+                                "SomeIpMethodNetworkCycleMs": 0,
+                                "SomeIpMethodOnChangeSendTimeMs": 0,
+                                "SomeIpMethodProtocol": "unreliable",
+                                "SomeIpMethodRequestRetentionTimeMs": 5,
+                                "SomeIpMethodResponseRetentionTimeMs": 0,
+                                "SomeIpMethodResponseTimeMs": 0,
+                                "SomeIpMethodSenderReceiverInterfaceType": "Unqueued"
+                            }
+                        }
+                    }
+                },
+                "echoUNION": {
+                    "name": "echoUNION",
+                    "fire_and_forget": false,
+                    "tags": {
+                        "description": "The method returns the transfered union back to the invoker.",
+                        "external_id": "oid=_591120513B6207DEE053221232A02515"
+                    },
+                    "inputs": [
+                        {
+                            "name": "unionElement",
+                            "datatype": "Test.INFRASTRUCTURE.TESTABILITY.__Anonymous__.Union1@0.0"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "unionReturnElement",
+                            "datatype": "Test.INFRASTRUCTURE.TESTABILITY.__Anonymous__.Union1@0.0"
+                        }
+                    ],
+                    "deployment": {
+                        "network.someip": {
+                            "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh2.echoUNION": {
+                                "MethodTimeout": 0,
+                                "SomeIpMethodApplicationCycleMs": 0,
+                                "SomeIpMethodDebounceTimeMs": 100,
+                                "SomeIpMethodEndianess": "be",
+                                "SomeIpMethodErrorCoding": "Header",
+                                "SomeIpMethodID": 25,
+                                "SomeIpMethodNetworkCycleMs": 0,
+                                "SomeIpMethodOnChangeSendTimeMs": 0,
+                                "SomeIpMethodProtocol": "unreliable",
+                                "SomeIpMethodRequestRetentionTimeMs": 5,
+                                "SomeIpMethodResponseRetentionTimeMs": 0,
+                                "SomeIpMethodResponseTimeMs": 0,
+                                "SomeIpMethodSenderReceiverInterfaceType": "Unqueued"
+                            }
+                        }
+                    }
+                }
+            },
+            "attributes": {
+                "TestFieldUINT8Array": {
+                    "name": "TestFieldUINT8Array",
+                    "tags": {
+                        "description": "A field with an array declaration of UINT8 values.",
+                        "external_id": "oid=_591120513B7907DEE053221232A02515"
+                    },
+                    "writable": true,
+                    "readable": true,
+                    "subscribable": true,
+                    "datatype": "UInt8",
+                    "array_size": [
+                        0,
+                        5
+                    ],
+                    "deployment": {
+                        "network.someip": {
+                            "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh2.TestFieldUINT8Array": {
+                                "AttributeGetterTimeout": 0,
+                                "AttributeNotifierTimeout": 0,
+                                "AttributeNotifierUpdateMode": "OnChange",
+                                "AttributeSetterTimeout": 0,
+                                "SomeIpArrayLengthWidth": 4,
+                                "SomeIpArrayMaxLength": 5,
+                                "SomeIpArrayMinLength": 0,
+                                "SomeIpAttributeEndianess": "be",
+                                "SomeIpAttributeProtocol": "unreliable",
+                                "SomeIpGetterDebounceTime": 100,
+                                "SomeIpGetterID": 40,
+                                "SomeIpGetterMaxRetentionTime": 5,
+                                "SomeIpNotifierDebounceTime": 100,
+                                "SomeIpNotifierID": 32775,
+                                "SomeIpNotifierMaxRetentionTime": 5,
+                                "SomeIpNotifierMulticast": false,
+                                "SomeIpNotifierSenderReceiverInterfaceType": "Unqueued",
+                                "SomeIpSetterID": 41,
+                                "SomeIpSetterMaxRetentionTime": 5,
+                                "SomeIpSetterRequestDebounceTime": 100,
+                                "eventgroups": [
+                                    "EventsAndFieldsAll",
+                                    "EventsAndFieldsUnreliable"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "broadcasts": {
+                "TestEventUINT8Multicast": {
+                    "name": "TestEventUINT8Multicast",
+                    "selective": false,
+                    "outputs": [
+                        {
+                            "name": "uINT8Value",
+                            "datatype": "UInt8"
+                        }
+                    ],
+                    "tags": {
+                        "description": "An event to test an UINT8 parameter. It is send periodically to a multicast address and triggered by the triggerEventUINT8Multicast method. The UINT8 value has to be incremented after each transmission.",
+                        "external_id": "oid=_591120513B4C07DEE053221232A02515"
+                    },
+                    "deployment": {
+                        "network.someip": {
+                            "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh2.TestEventUINT8Multicast": {
+                                "SomeIpBroadcastCycleTimeMs": 0,
+                                "SomeIpBroadcastDebounceTime": 100,
+                                "SomeIpBroadcastEndianess": "be",
+                                "SomeIpBroadcastMaxRetentionTime": 5,
+                                "SomeIpBroadcastProtocol": "unreliable",
+                                "SomeIpBroadcastSenderReceiverInterfaceType": "Unqueued",
+                                "SomeIpEventID": 32779,
+                                "eventgroups": [
+                                    "EventsUDPMulticast"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "TestEventUINT8Array": {
+                    "name": "TestEventUINT8Array",
+                    "selective": false,
+                    "outputs": [
+                        {
+                            "name": "uINT8Array",
+                            "datatype": "UInt8",
+                            "array_size": [
+                                0,
+                                5
+                            ],
+                            "deployment": {
+                                "network.someip": {
+                                    "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh.TestEventUINT8Array.uINT8Array": {
+                                        "SomeIpArrayLengthWidth": 4,
+                                        "SomeIpArrayMaxLength": 5,
+                                        "SomeIpArrayMinLength": 0
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "tags": {
+                        "description": "An event to test parameters with array declarations. It is send periodically and triggered by the triggerEventUINT8Array method. The array has to be increased after each transmission. The array values correlates to the index of each element.",
+                        "external_id": "oid=_217705E7DAEC4833AC6B1EAEBB44E226"
+                    },
+                    "deployment": {
+                        "network.someip": {
+                            "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh.TestEventUINT8Array": {
+                                "SomeIpBroadcastCycleTimeMs": 0,
+                                "SomeIpBroadcastDebounceTime": 100,
+                                "SomeIpBroadcastEndianess": "be",
+                                "SomeIpBroadcastMaxRetentionTime": 5,
+                                "SomeIpBroadcastProtocol": "unreliable",
+                                "SomeIpBroadcastSenderReceiverInterfaceType": "Unqueued",
+                                "SomeIpEventID": 32770,
+                                "eventgroups": [
+                                    "EventsAndFieldsAll",
+                                    "EventsAndFieldsUnreliable"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "deployment": {
+                "network.someip": {
+                    "Test.INFRASTRUCTURE.TESTABILITY.EnhancedTestabilityServiceHigh2_Someip": {
+                        "SomeIpServiceID": 257,
+                        "use": [
+                            "Test.ENVIRONMENTALMODEL.COMMON.Types_Someip",
+                            "Test.INFRASTRUCTURE.TESTABILITY.Types_Someip"
+                        ],
+                        "eventgroups": {
+                            "EventsAndFieldsAll": 2,
+                            "EventsAndFieldsUnreliable": 5,
+                            "EventsUDPMulticast": 6
+                        }
+                    }
+                }
+            },
+            "version": {
+                "major": 2,
+                "minor": 0
+            }
+        },
+        "Test.CHASSIS.VehicleModel@1.0": {
+            "package": "Test.CHASSIS",
+            "name": "VehicleModel",
+            "tags": {
+                "description": "Some vehicle infos",
+                "external_id": "oid=_87CD43427964472B9F0B25A13892158D"
+            },
+            "attributes": {
+                "OdometryVehicle2": {
+                    "name": "OdometryVehicle2",
+                    "tags": {
+                        "description": "0.04",
+                        "external_id": "oid=_B5A44BB0F2F648A6B44F82D0364082BE"
+                    },
+                    "subscribable": true,
+                    "datatype": "Test.CHASSIS.__Anonymous__.OdometryVehicle2Wrapper@0.0",
+                    "deployment": {
+                        "network.someip": {
+                            "Test.CHASSIS.VehicleModel.OdometryVehicle2": {
+                                "AttributeNotifierTimeout": 0,
+                                "AttributeNotifierUpdateMode": "OnChange",
+                                "SomeIpAttributeEndianess": "le",
+                                "SomeIpAttributeProtocol": "unreliable",
+                                "SomeIpNotifierDebounceTime": 0,
+                                "SomeIpNotifierE2EProfile": "profile1a",
+                                "SomeIpNotifierID": 32770,
+                                "SomeIpNotifierMaxRetentionTime": 5,
+                                "SomeIpNotifierMulticast": false,
+                                "SomeIpNotifierSenderReceiverInterfaceType": "Unqueued",
+                                "SomeIpStructLengthWidth": 0,
+                                "StructBitField": false,
+                                "eventgroups": [
+                                    "EgOdometryVehicle"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "deployment": {
+                "network.someip": {
+                    "Test.CHASSIS.VehicleModel_Someip": {
+                        "SomeIpServiceID": 30000,
+                        "use": [
+                            "Test.CHASSIS.Types_Someip",
+                            "Test.INFRASTRUCTURE.Types_Someip"
+                        ],
+                        "eventgroups": {
+                            "EgHeightLevelVehicle2": 2,
+                            "EgLaneSlope": 6,
+                            "EgMassVehicle": 4,
+                            "EgMassVehicle2": 10,
+                            "EgMileage": 5,
+                            "EgOdometryVehicle": 1,
+                            "EgStatusLevelControlSystemVehicle2_2": 8,
+                            "EgStatusLevelControlSystemVehicleFull": 9,
+                            "EgTrailer": 7
+                        }
+                    }
+                }
+            },
+            "version": {
+                "major": 1,
+                "minor": 0
+            }
+        }
+    },
+    "components": {},
+    "devices": {},
+    "bus": {},
+    "bus_frame_ref": {},
+    "channel": {},
+    "units": {},
+    "signals": {},
+    "sigcoding": {},
+    "services": {},
+    "variant": {},
+    "cluster": {}
+}
