@@ -2514,7 +2514,7 @@ pub fn load_all_fibex(files: &[PathBuf]) -> Result<FibexData, FibexError> {
 
 /// determine all fibex files in one dir
 ///
-/// for now this is equivalent to all .xml files in the sub dir
+/// for now this is equivalent to all .xml/.json files in the sub dir
 ///
 /// Search can be recursive. In that case all non symlink dir entries will be searched as well.
 /// io::errors from sub dirs are ignored
@@ -2534,7 +2534,7 @@ pub fn get_all_fibex_in_dir(dir: &Path, recursive: bool) -> Result<Vec<PathBuf>,
             }
         } else if entry.path().is_file() {
             if let Some(ext) = entry.path().extension() {
-                if ext.eq_ignore_ascii_case("xml") {
+                if ext.eq_ignore_ascii_case("xml") || ext.eq_ignore_ascii_case("json") {
                     res.push(entry.path().clone());
                 }
             }
