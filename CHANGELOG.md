@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.10.1 - 2023-07-23
+#### Bug Fixes
+- let get_all_fibex_in_dir find json files - (66aa6ee) - Matthias Behr
+
+- - -
+
 ## v0.10.0 - 2023-07-23
 #### Features
 - add support for franca-json files - (12de732) - Matthias Behr
