@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.11.0 - 2024-02-12
+#### Features
+- add parse_warnings vec to FibexData - (a893684) - Matthias Behr
+#### Miscellaneous Chores
+- fix new clippy warnings - (ce4fa74) - Matthias Behr
+
+- - -
+
 ## v0.10.1 - 2023-07-23
 #### Bug Fixes
 - let get_all_fibex_in_dir find json files - (66aa6ee) - Matthias Behr
