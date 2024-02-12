@@ -2310,10 +2310,10 @@ impl CompuMethod {
             .child_by_name("CATEGORY")
             .and_then(|c| c.text.as_deref());
         let category = match category {
-            Some(cat) if cat == "IDENTICAL" => CompuCategory::Identical,
-            Some(cat) if cat == "BITFIELD-TEXTTABLE" => CompuCategory::BitfieldTextTable,
-            Some(cat) if cat == "LINEAR" => CompuCategory::Linear,
-            Some(cat) if cat == "TEXTTABLE" => CompuCategory::TextTable,
+            Some("IDENTICAL") => CompuCategory::Identical,
+            Some("BITFIELD-TEXTTABLE") => CompuCategory::BitfieldTextTable,
+            Some("LINEAR") => CompuCategory::Linear,
+            Some("TEXTTABLE") => CompuCategory::TextTable,
             Some(cat) => {
                 println!("CompuMethod::from_xml: unknown CATEGORY {}", cat); // todo...
                 return Err(FibexError {
