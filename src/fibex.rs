@@ -766,11 +766,16 @@ pub struct ProcessingInformation {
     pub codings: HashMap<String, Coding>,
 }
 
+/// structure holding the parsed data from multiple fibex files
+///
+/// For usage see ::new() and ::load_fibex_file()
 #[derive(Debug)]
 pub struct FibexData {
     pub projects: Vec<Project>, // as we can hold info for multiple/super-set of projects
     pub elements: Elements,
     pub pi: ProcessingInformation,
+    /// parse_warnings contains a list of distinct warnings occured during parsing
+    pub parse_warnings: Vec<String>,
 }
 
 impl FibexData {
@@ -789,6 +794,7 @@ impl FibexData {
             pi: ProcessingInformation {
                 codings: HashMap::new(),
             },
+            parse_warnings: Vec::new(),
         }
     }
     pub fn load_fibex_file(&mut self, file: &Path) -> Result<(), Box<dyn Error>> {
@@ -805,10 +811,10 @@ impl FibexData {
                     self.parse_fibex(e, &mut reader)?
                 }
                 Event::Start(ref e) | Event::Empty(ref e) => {
-                    println!(
-                        "load_fibex_file: unexpected Event of '{}' treating as no fibex!",
-                        String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                    );
+                    let warning = format!("load_fibex_file: unexpected Event of '{}' treating as no fibex! (Expected 'FIBEX' tag.)",
+                    String::from_utf8(e.local_name().to_vec()).unwrap_or_default());
+                    println!("{}", warning); // todo remove. for now keeping as a really important one
+                    self.add_distinct_warning(warning);
                     return Err(FibexError::new("expecting only FIBEX tag").into());
                 }
                 Event::Eof => break,
@@ -816,6 +822,13 @@ impl FibexData {
             }
         }
         Ok(())
+    }
+
+    fn add_distinct_warning(&mut self, warning: String) {
+        // we assume little amount of distinct warnings, so we can use a simple linear search
+        if !self.parse_warnings.contains(&warning) {
+            self.parse_warnings.push(warning);
+        }
     }
 
     fn parse_fibex<T: BufRead>(
@@ -835,17 +848,17 @@ impl FibexData {
                     b"ELEMENTS" => self.parse_elements(e, reader)?,
                     b"PROCESSING-INFORMATION" => self.parse_pi(e, reader)?,
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_fibex: unprocessed Event::Start of '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?;
                     }
                 },
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_fibex: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == fibex.local_name() => break,
                 _ => {}
             }
@@ -891,18 +904,18 @@ impl FibexData {
                     b"PDU" => self.parse_pdu(e, reader)?,
                     b"CHANNEL" => self.parse_channel(e, reader)?,
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_elements: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         // skip element to keep the recursive order.
                         skip_element(e, reader)?;
                     }
                 },
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_elements: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_elements.local_name() => break,
                 _ => {}
             }
@@ -929,17 +942,17 @@ impl FibexData {
                             .push(si);
                     }
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_service_interfaces: unprocessed Event::Start of '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?;
                     }
                 },
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_service_interface: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_si.local_name() => break,
                 _ => {}
             }
@@ -1028,18 +1041,18 @@ impl FibexData {
                     }
                     b"EVENT-GROUPS" => skip_element(e, reader)?, // todo!
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_service_interface: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_service_interface: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_si.local_name() => break,
                 _ => {}
             }
@@ -1108,16 +1121,16 @@ impl FibexData {
                                     frame_ref_by_frame_triggering_identifier
                                         .insert(identifier, frame_ref);
                                 } else {
-                                    println!(
+                                    self.add_distinct_warning(format!(
                                     "parse_channel: ignoring FRAME-TRIGGERING ID'{:?}' due to missing FRAME-REF",
                                     ft.attr("ID")
-                                )
+                                ));
                                 }
                             } else {
-                                println!(
+                                self.add_distinct_warning(format!(
                                     "parse_channel: ignoring FRAME-TRIGGERING ID'{:?}' due to IDENTIFIER=0",
                                     ft.attr("ID")
-                                )
+                                ));
                             }
                         } /* quite common case for e.g. flexray else{
                               println!(
@@ -1127,18 +1140,18 @@ impl FibexData {
                           }*/
                     }
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_channel: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_channel: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_si.local_name() => break,
                 _ => {}
             }
@@ -1150,6 +1163,7 @@ impl FibexData {
             frame_ref_by_frame_triggering_identifier,
             manufacturer_extension,
         };
+        let mut warnings = vec![];
         // does a channel with same id exist yet?
         if let Some(exist_channel) = self.elements.channels.get_mut(&channel.id) {
             // update/merge existing one:
@@ -1158,9 +1172,9 @@ impl FibexData {
                 Some(exist_name) => {
                     if let Some(new_name) = &channel.short_name {
                         if new_name != exist_name {
-                            println!(
+                            warnings.push(format!(
                                 "parse_channel: merge channel id '{}' different names exist: {} vs. new (ignored) {}", channel.id, exist_name, new_name
-                            );
+                            ));
                         }
                     }
                 }
@@ -1175,13 +1189,16 @@ impl FibexData {
             for new_chan in channel.frame_ref_by_frame_triggering_identifier.into_iter() {
                 exist_channel.frame_ref_by_frame_triggering_identifier.entry(new_chan.0)
                 .and_modify(|ref_id|{if ref_id != &new_chan.1 {
-                         println!("parse_channel: merge channel id '{}' frame {} different ref exist {} vs. {}", channel.id, new_chan.0, ref_id, new_chan.1);
+                         warnings.push(format!("parse_channel: merge channel id '{}' frame {} different ref exist {} vs. {}", channel.id, new_chan.0, ref_id, new_chan.1));
                     }}).or_insert(new_chan.1);
             }
         } else {
             self.elements
                 .channels
                 .insert(channel.id.to_owned(), channel);
+        }
+        for warning in warnings {
+            self.add_distinct_warning(warning);
         }
         Ok(())
     }
@@ -1219,18 +1236,18 @@ impl FibexData {
                     | b"DIAGNOSTIC-ADDRESSES"
                     | b"CONTROLLERS" => skip_element(e, reader)?, // todo add once needed
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_ecu: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_ecu: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_si.local_name() => break,
                 _ => {}
             }
@@ -1335,18 +1352,18 @@ impl FibexData {
                     b"LONG-NAME" => skip_element(e, reader)?, // todo
                     b"ELEMENT-REVISIONS" => skip_element(e, reader)?,
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_frame: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_frame: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_si.local_name() => break,
                 _ => {}
             }
@@ -1404,10 +1421,10 @@ impl FibexData {
                     b"LONG-NAME" => skip_element(e, reader)?, // todo
                     b"ELEMENT-REVISIONS" | b"SIGNAL-TYPE" => skip_element(e, reader)?,
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_signal: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
@@ -1419,10 +1436,10 @@ impl FibexData {
                     }
                 }
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_signal: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_si.local_name() => break,
                 _ => {}
             }
@@ -1536,18 +1553,18 @@ impl FibexData {
                     b"LONG-NAME" => skip_element(e, reader)?, // todo
                     b"ELEMENT-REVISIONS" => skip_element(e, reader)?, // todo
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_pdu: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_pdu: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_si.local_name() => break,
                 _ => {}
             }
@@ -1579,7 +1596,7 @@ impl FibexData {
     }
 
     fn parse_multiplexer<T: BufRead>(
-        &self,
+        &mut self,
         e_mpx: &quick_xml::events::BytesStart,
         reader: &mut Reader<T>,
     ) -> Result<Option<Multiplexer>, Box<dyn Error>> {
@@ -1621,10 +1638,10 @@ impl FibexData {
                             }
                         }
                         if switch.is_none() {
-                            println!(
+                            self.add_distinct_warning(format!(
                                 "parse_multiplexer: couldn't parse SWITCH for '{}'",
                                 String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                            );
+                            ));
                         }
                     }
                     b"DYNAMIC-PART" => {
@@ -1700,25 +1717,25 @@ impl FibexData {
                         }
 
                         if dynamic_part.is_none() {
-                            println!(
+                            self.add_distinct_warning(format!(
                                 "parse_multiplexer: couldn't parse DYNAMIC-PART for '{}'",
                                 String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                            );
+                            ));
                         }
                     }
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_multiplexer: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_multiplexer: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_mpx.local_name() => break,
                 _ => {} // text, comment
             }
@@ -1782,10 +1799,10 @@ impl FibexData {
                             }
                             .push(param);
                         } else {
-                            println!(
+                            self.add_distinct_warning(format!(
                                 "parse_method: Ignoring parameter due to Err '{}'",
                                 param.unwrap_err()
-                            )
+                            ));
                         }
                         //let key = method.method_identifier.unwrap_or_default();
                         //methods_by_mid.insert(key, method); // todo ignore duplicates?
@@ -1794,18 +1811,18 @@ impl FibexData {
                         skip_element(e, reader)?
                     } // todo!
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_method: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
                 Event::Empty(ref e) if e.local_name() == b"PACKAGE-REF" => {} // todo ignore for now
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_method: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_method.local_name() => break,
                 _ => {}
             }
@@ -1997,10 +2014,10 @@ impl FibexData {
                     }
                     b"ACCESS-PERMISSION" => skip_element(e, reader)?,
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_parameter: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
@@ -2011,10 +2028,10 @@ impl FibexData {
                         datatype_ref = Some(v.to_owned());
                     }
                 }
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_parameter: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_pa.local_name() => break,
                 _ => {}
             }
@@ -2059,17 +2076,17 @@ impl FibexData {
                             .insert(dt.id.to_owned(), dt); // todo check for dupl? and avoid id.clone
                     }
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_datatypes: unprocessed Event::Start of '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?;
                     }
                 },
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_datatypes: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_dt.local_name() => break,
                 _ => {}
             }
@@ -2133,14 +2150,17 @@ impl FibexData {
                         Ok(param) => members.push(param),
                         Err(e) => {
                             // e.g. if DATATYPE-REF is missing/empty (some faulty fibex generators)
-                            println!("parse_datatype: MEMBERS skipping MEMBER due to Err '{}'", e);
+                            self.add_distinct_warning(format!(
+                                "parse_datatype: MEMBERS skipping MEMBER due to Err '{}'",
+                                e
+                            ));
                         }
                     },
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_datatype: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
@@ -2152,10 +2172,10 @@ impl FibexData {
                         coding_ref = Some(v.to_owned());
                     }
                 }
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_datatype: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == e_dt.local_name() => break,
                 _ => {}
             }
@@ -2190,14 +2210,14 @@ impl FibexData {
                 })?)
             }
             Some(s) => {
-                println!(
+                self.add_distinct_warning(format!(
                     "parse_datatype: unhandled etype '{}'",
                     String::from_utf8(s).unwrap_or_default()
-                );
+                ));
                 return Err(FibexError::new("unknown type for DATATYPE").into());
             }
             _ => {
-                println!("parse_datatype: unhandled etype '{:?}'", etype);
+                self.add_distinct_warning(format!("parse_datatype: unhandled etype '{:?}'", etype));
                 return Err(FibexError::new("unknown/missing type for DATATYPE").into());
             }
         };
@@ -2222,17 +2242,17 @@ impl FibexData {
                 Event::Start(ref e) => match e.local_name() {
                     b"CODINGS" => self.parse_codings(e, reader)?,
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_pi: unprocessed Event::Start of '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_pi: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == pi.local_name() => break,
                 _ => {}
             }
@@ -2254,17 +2274,17 @@ impl FibexData {
                         self.pi.codings.insert(coding.id.clone(), coding);
                     }
                     _ => {
-                        println!(
+                        self.add_distinct_warning(format!(
                             "parse_codings: Event::Start of unknown '{}'",
                             String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                        );
+                        ));
                         skip_element(e, reader)?
                     }
                 },
-                Event::Empty(ref e) => println!(
+                Event::Empty(ref e) => self.add_distinct_warning(format!(
                     "parse_codings: Event::Empty of unknown '{}'",
                     String::from_utf8(e.local_name().to_vec()).unwrap_or_default()
-                ),
+                )),
                 Event::End(ref e) if e.local_name() == codings.local_name() => break,
                 _ => {}
             }
@@ -2315,14 +2335,14 @@ impl CompuMethod {
             Some("LINEAR") => CompuCategory::Linear,
             Some("TEXTTABLE") => CompuCategory::TextTable,
             Some(cat) => {
-                println!("CompuMethod::from_xml: unknown CATEGORY {}", cat); // todo...
+                //println!("CompuMethod::from_xml: unknown CATEGORY {}", cat); // todo...
                 return Err(FibexError {
                     msg: format!("CompuMethod: unknown CATEGORY {}", cat),
                 }
                 .into());
             }
             None => {
-                println!("CompuMethod::from_xml: missing CATEGORY"); // todo...
+                //println!("CompuMethod::from_xml: missing CATEGORY"); // todo...
                 return Err(FibexError::new("CompuMethod: missing CATEGORY").into());
             }
         };
@@ -2507,6 +2527,7 @@ pub fn load_all_fibex(files: &[PathBuf]) -> Result<FibexData, FibexError> {
     for file in files {
         if let Err(e) = fd.load_fibex_file(file) {
             println!("load_fibex_file(file={:?}) failed with:{}", file, e);
+            // should be in fd.parse_warnings as well... but keeping here due to importance for now
         }
     }
     Ok(fd)
@@ -2565,6 +2586,7 @@ mod tests {
         assert!(path.exists());
         let r = fb.load_fibex_file(path);
         assert!(r.is_ok(), "{:?}", r.err());
+        assert_eq!(fb.parse_warnings.len(), 0);
         assert_eq!(fb.pi.codings.len(), 3);
         assert_eq!(fb.elements.datatypes_map_by_id.len(), 5);
         let dt = &fb
@@ -2589,6 +2611,7 @@ mod tests {
         assert!(path.exists());
         let r = fb.load_fibex_file(path);
         assert!(r.is_ok(), "{:?}", r.err());
+        assert_eq!(fb.parse_warnings.len(), 0);
         assert_eq!(fb.elements.services_map_by_sid_major.len(), 3);
         assert_eq!(fb.elements.datatypes_map_by_id.len(), 19);
 
