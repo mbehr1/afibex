@@ -933,13 +933,19 @@ impl FibexData {
             match reader.read_event(&mut buf)? {
                 Event::Start(ref e) => match e.local_name() {
                     b"SERVICE-INTERFACE" => {
-                        let si = self.parse_service_interface(e, reader)?; // todo skip single failures?
-                        let key = (si.service_identifier.unwrap_or_default(), si.api_version.0);
-                        self.elements
-                            .services_map_by_sid_major
-                            .entry(key)
-                            .or_default()
-                            .push(si);
+                        match self.parse_service_interface(e, reader){
+                            Ok(si)=>{
+                                let key = (si.service_identifier.unwrap_or_default(), si.api_version.0);
+                                self.elements
+                                    .services_map_by_sid_major
+                                    .entry(key)
+                                    .or_default()
+                                    .push(si);        
+                            }
+                            Err(e)=>{
+                                self.add_distinct_warning(format!("parse_service_interfaces: failed to parse service_interface: {}", e));
+                            }           
+                        }
                     }
                     _ => {
                         self.add_distinct_warning(format!(
@@ -1987,7 +1993,7 @@ impl FibexData {
                                     .ok_or_else(|| {
                                         Box::new(FibexError {
                                             msg: format!(
-                                                "DATATYPE-REF missing for PARAMETER ID={}",
+                                                "DIMENSION wrong for ARRAY-DIMENSION for PARAMETER ID={}",
                                                 id
                                             ),
                                         })
