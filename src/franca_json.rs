@@ -97,8 +97,8 @@ impl FibexData {
                         {
                             nr_errs += 1;
                             println!(
-                                "validate_datatypes(cdt {}): unknown datatype {}!",
-                                dt_name, member.datatype_ref
+                                "validate_datatypes(cdt {}): unknown datatype {}, member={:?}!",
+                                dt_name, member.datatype_ref, member
                             );
                         }
                     }
