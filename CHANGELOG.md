@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.11.1 - 2024-05-01
+#### Bug Fixes
+- dont stop parsing services on first service failure - (a34e7de) - Matthias Behr
+#### Miscellaneous Chores
+- more details for validation errors - (4fb6332) - Matthias Behr
+
+- - -
+
 ## v0.11.0 - 2024-02-12
 #### Features
 - add parse_warnings vec to FibexData - (a893684) - Matthias Behr
